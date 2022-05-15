@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-public class SegmentRange<TValue>
+internal class SegmentRange<TValue>
 {
     public SegmentRange(TValue value)
     {

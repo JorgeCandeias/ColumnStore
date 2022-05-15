@@ -7,6 +7,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Outcompute.ColumnStore", "O
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Outcompute.TestApp", "Outcompute.TestApp\Outcompute.TestApp.csproj", "{F80B3070-A8DD-4777-B554-135C040EADBF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Outcompute.Benchmarks", "Outcompute.Benchmarks\Outcompute.Benchmarks.csproj", "{DACE0771-F7B2-45AC-B634-255D4B3FD384}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Outcompute.CompareMemory", "Outcompute.CompareMemory\Outcompute.CompareMemory.csproj", "{3A68856C-6D92-40EE-8BCD-3656C8220F50}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{F80B3070-A8DD-4777-B554-135C040EADBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F80B3070-A8DD-4777-B554-135C040EADBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F80B3070-A8DD-4777-B554-135C040EADBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DACE0771-F7B2-45AC-B634-255D4B3FD384}.Debug|Any CPU.ActiveCfg = Release|Any CPU
+		{DACE0771-F7B2-45AC-B634-255D4B3FD384}.Debug|Any CPU.Build.0 = Release|Any CPU
+		{DACE0771-F7B2-45AC-B634-255D4B3FD384}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DACE0771-F7B2-45AC-B634-255D4B3FD384}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A68856C-6D92-40EE-8BCD-3656C8220F50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A68856C-6D92-40EE-8BCD-3656C8220F50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A68856C-6D92-40EE-8BCD-3656C8220F50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A68856C-6D92-40EE-8BCD-3656C8220F50}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

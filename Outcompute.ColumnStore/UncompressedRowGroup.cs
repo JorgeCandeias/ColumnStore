@@ -2,7 +2,7 @@
 
 namespace Outcompute.ColumnStore;
 
-public class UncompressedRowGroup<TRow> : IReadOnlyList<TRow>
+internal class UncompressedRowGroup<TRow> : IReadOnlyList<TRow>
 {
     private readonly ColumnStoreOptions _options;
 

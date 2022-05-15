@@ -2,7 +2,7 @@
 
 namespace Outcompute.ColumnStore;
 
-public abstract class CompressedRowGroup<TRow> : IReadOnlyCollection<TRow>
+internal abstract class CompressedRowGroup<TRow> : IReadOnlyCollection<TRow>
 {
     public int Count { get; protected set; }
 

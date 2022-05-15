@@ -51,7 +51,7 @@ void PrintStats()
 namespace XPTO
 {
     [ColumnStore]
-    public record struct Book()
+    public record class Book()
     {
         [ColumnStoreProperty]
         public int Year { get; set; } = 0;

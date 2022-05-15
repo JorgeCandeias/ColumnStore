@@ -3,7 +3,7 @@
 /// <summary>
 /// A generic column segment that supports any type.
 /// </summary>
-public class ColumnSegment<TValue>
+internal class ColumnSegment<TValue>
     where TValue : IEquatable<TValue>
 {
     public ColumnSegment(string propertyName)

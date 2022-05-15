@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-public enum RowGroupState
+internal enum RowGroupState
 {
     Open,
     Closed

@@ -8,7 +8,7 @@ public class ColumnStore<TRow> : IReadOnlyCollection<TRow> where TRow : new()
     private readonly DeltaStore<TRow> _delta;
     private readonly List<CompressedRowGroup<TRow>> _groups = new();
 
-    public ColumnStore()
+    public ColumnStore() : this(new ColumnStoreOptions())
     {
         _delta = new DeltaStore<TRow>(new ColumnStoreOptions());
     }
@@ -18,6 +18,8 @@ public class ColumnStore<TRow> : IReadOnlyCollection<TRow> where TRow : new()
         Guard.IsNotNull(options, nameof(options));
 
         _delta = new DeltaStore<TRow>(options);
+
+        CompressedRowGroupFactory.ReadyType<TRow>();
     }
 
     public int Count { get; private set; }
