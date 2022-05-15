@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32414.318
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Outcompute.ColumnStore", "Outcompute.ColumnStore\Outcompute.ColumnStore.csproj", "{6C598195-5855-4ECA-A4F4-4E932CAAA02D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Outcompute.TestApp", "Outcompute.TestApp\Outcompute.TestApp.csproj", "{F80B3070-A8DD-4777-B554-135C040EADBF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6C598195-5855-4ECA-A4F4-4E932CAAA02D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C598195-5855-4ECA-A4F4-4E932CAAA02D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C598195-5855-4ECA-A4F4-4E932CAAA02D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C598195-5855-4ECA-A4F4-4E932CAAA02D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F80B3070-A8DD-4777-B554-135C040EADBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F80B3070-A8DD-4777-B554-135C040EADBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F80B3070-A8DD-4777-B554-135C040EADBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F80B3070-A8DD-4777-B554-135C040EADBF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FD7E2385-4AAF-4307-91AC-808E7C052F63}
+	EndGlobalSection
+EndGlobal
