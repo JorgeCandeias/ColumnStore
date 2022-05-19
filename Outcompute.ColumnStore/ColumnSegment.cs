@@ -3,17 +3,16 @@
 /// <summary>
 /// A generic column segment that supports any type.
 /// </summary>
-internal class ColumnSegment<TValue>
-    where TValue : IEquatable<TValue>
+internal class ColumnSegment<TValue> where TValue : IComparable<TValue>
 {
     public ColumnSegment(string propertyName)
     {
         PropertyName = propertyName;
     }
 
-    private readonly List<SegmentRange<TValue>> _ranges = new();
+    private readonly List<ColumnSegmentRange<TValue>> _ranges = new();
 
-    private SegmentRange<TValue>? _last;
+    private ColumnSegmentRange<TValue>? _last;
 
     private int _count;
 
@@ -21,23 +20,7 @@ internal class ColumnSegment<TValue>
 
     public void Add(TValue value)
     {
-        // handle the first item or a different item
-        if (_ranges.Count == 0 || !_last!.Value.Equals(value))
-        {
-            _last = new SegmentRange<TValue>(value)
-            {
-                Count = 1
-            };
-
-            _ranges.Add(_last);
-        }
-        else
-        {
-            // handle repeat item
-            _last.Count++;
-        }
-
-        _count++;
+        throw new NotImplementedException();
     }
 
     public IEnumerable<TValue> EnumerateRows()
@@ -46,20 +29,21 @@ internal class ColumnSegment<TValue>
         {
             var range = _ranges[i];
 
-            for (var j = 0; j < range.Count; j++)
+            for (var j = range.Start; j < range.End; j++)
             {
                 yield return range.Value;
             }
         }
     }
 
-    public IEnumerable<SegmentRange<TValue>> EnumerateRanges()
+    public IEnumerable<ColumnSegmentRange<TValue>> EnumerateRanges()
     {
         return _ranges;
     }
 
     public ColumnSegmentStats GetStats()
     {
-        return new ColumnSegmentStats(PropertyName, _count, _ranges.Count);
+        //return new ColumnSegmentStats(PropertyName, _count, _ranges.Count);
+        throw new NotImplementedException();
     }
 }

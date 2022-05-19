@@ -44,7 +44,7 @@ void PrintStats()
     {
         logger.Information("{@Item}", item);
     }
-    logger.Information("{@Stats}", cs.GetStats());
+    //logger.Information("{@Stats}", cs.GetStats());
     logger.Information("");
 }
 

@@ -19,7 +19,7 @@ public class ColumnStore<TRow> : IReadOnlyCollection<TRow> where TRow : new()
 
         _delta = new DeltaStore<TRow>(options);
 
-        CompressedRowGroupFactory.ReadyType<TRow>();
+        //ModelSupportFactory.ReadyTypes<TRow>();
     }
 
     public int Count { get; private set; }
@@ -54,11 +54,6 @@ public class ColumnStore<TRow> : IReadOnlyCollection<TRow> where TRow : new()
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    public ColumnStoreStats GetStats()
-    {
-        return new ColumnStoreStats(Count, _delta.Count, _groups.Select(x => x.GetStats()).ToList());
-    }
 
     private void TryCompact()
     {

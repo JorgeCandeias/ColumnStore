@@ -27,7 +27,7 @@ public class ColumnStoreMemorySizeBenchmark
         }
     }
 
-    [Params(100_000_000)]
+    [Params(100)]
     public int N { get; set; }
 
     [Benchmark(Baseline = true)]

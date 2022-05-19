@@ -1,50 +1,32 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
+using Outcompute.ColumnStore.CodeGenerator;
 using System.Reflection;
 
-namespace Outcompute.ColumnStore;
+namespace Outcompute.ColumnStore.CodeGeneration;
 
-internal static class CompressedRowGroupFactory
+/// <summary>
+/// Generates the classes required to support user models.
+/// </summary>
+internal class ModelCodeGenerator
 {
-    private static readonly ConcurrentDictionary<Type, Type> _lookup = new();
+    private readonly IModelDescriber _describer;
 
-    public static CompressedRowGroup<TRow> Create<TRow>()
+    public ModelCodeGenerator(IModelDescriber describer)
     {
-        var type = GetOrAddType<TRow>();
+        Guard.IsNotNull(describer, nameof(describer));
 
-        return (CompressedRowGroup<TRow>)Activator.CreateInstance(type);
+        _describer = describer;
     }
 
-    public static void ReadyType<TRow>()
+    public ModelSupportTypes CreateTypes(Type type)
     {
-        GetOrAddType<TRow>();
-    }
-
-    private static Type GetOrAddType<TRow>() => _lookup.GetOrAdd(typeof(TRow), k => CreateType(k));
-
-    [SuppressMessage("Major Code Smell", "S3011:Reflection should not be used to increase accessibility of classes, methods, or fields", Justification = "Generated Code")]
-    private static Type CreateType(Type model)
-    {
-        // we need to reflect the type to inspect its properties emit code
-        // this is a one-off cost per type so performance is not critical
-
-        // ensure the type is marked
-        if (!model.IsDefined(typeof(ColumnStoreAttribute)))
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Type '{model.Name}' is not marked with '{nameof(ColumnStoreAttribute)}'");
-        }
-
-        // get all the marked properties
-        var props = model.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.IsDefined(typeof(ColumnStorePropertyAttribute))).ToList();
-        if (props.Count <= 0)
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Type '{model.Name}' does not have any properties marked with '{nameof(ColumnStorePropertyAttribute)}'");
-        }
+        var model = _describer.Describe(type);
 
         var typeNamespace = "Outcompute.ColumnStore.GeneratedCode";
         var typeName = $"{model.FullName.Replace(".", "")}CompressedRowGroup";
+
+        var props = model.Properties;
 
         var code = $@"
 
@@ -124,7 +106,7 @@ internal static class CompressedRowGroupFactory
         {
             var error = result.Diagnostics.Where(x => x.IsWarningAsError || x.Severity == DiagnosticSeverity.Error).FirstOrDefault();
 
-            ThrowHelper.ThrowInvalidOperationException($"Could not generate assembly for type '{model.Name}': {error?.GetMessage()}");
+            ThrowHelper.ThrowInvalidOperationException($"Could not generate assembly '{typeNamespace}' with type '{typeName}' for type '{model.Name}': {error?.GetMessage()}");
         }
 
         stream.Seek(0, SeekOrigin.Begin);
@@ -132,8 +114,18 @@ internal static class CompressedRowGroupFactory
         var context = new DynamicAssemblyLoadContext();
         var assembly = context.LoadFromStream(stream);
 
-        //var assembly = Assembly.Load(stream.ToArray());
-
-        return assembly.GetType($"{typeNamespace}.{typeName}");
+        return new ModelSupportTypes(assembly.GetType($"{typeNamespace}.{typeName}"));
     }
+
+    //public static ModelCodeGenerator Default { get; } = new();
+}
+
+internal class ModelSupportTypes
+{
+    public ModelSupportTypes(Type compressedRowGroupType)
+    {
+        CompressedRowGroupType = compressedRowGroupType;
+    }
+
+    public Type CompressedRowGroupType { get; }
 }

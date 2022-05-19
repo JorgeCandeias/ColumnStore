@@ -11,13 +11,13 @@ internal class DeltaStore<TRow> : IReadOnlyCollection<TRow>
         Guard.IsNotNull(options, nameof(options));
 
         _options = options;
-        _active = new UncompressedRowGroup<TRow>(options);
+        //_active = new UncompressedRowGroup<TRow>(options);
         _groups.Add(_active);
     }
 
-    private readonly HashSet<UncompressedRowGroup<TRow>> _groups = new();
+    private readonly HashSet<DeltaRowGroup<TRow>> _groups = new();
 
-    private UncompressedRowGroup<TRow> _active;
+    private DeltaRowGroup<TRow> _active;
 
     public int Count { get; private set; }
 
@@ -27,14 +27,14 @@ internal class DeltaStore<TRow> : IReadOnlyCollection<TRow>
 
         if (_active.State == RowGroupState.Closed)
         {
-            _active = new(_options);
+            //_active = new(_options);
             _groups.Add(_active);
         }
 
         Count++;
     }
 
-    public bool TryTakeClosed(out UncompressedRowGroup<TRow> group)
+    public bool TryTakeClosed(out DeltaRowGroup<TRow> group)
     {
         if (_groups.Count > 1)
         {
