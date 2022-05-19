@@ -8,12 +8,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Serilog" Version="2.11.0" />
-	  <PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
+		<PackageReference Include="Serilog" Version="2.11.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Outcompute.ColumnStore\Outcompute.ColumnStore.csproj" OutputItemType="Analyzer" />
+		<ProjectReference Include="..\Outcompute.ColumnStore\Outcompute.ColumnStore.csproj" />
+		<ProjectReference Include="..\Outcompute.ColumnStore.CodeGenerator\Outcompute.ColumnStore.CodeGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<PropertyGroup>

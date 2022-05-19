@@ -1,8 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Outcompute.ColumnStore.CodeGenerator;
-using System.Reflection;
-
+﻿/*
 namespace Outcompute.ColumnStore.CodeGeneration;
 
 /// <summary>
@@ -129,3 +125,4 @@ internal class ModelSupportTypes
 
     public Type CompressedRowGroupType { get; }
 }
+*/

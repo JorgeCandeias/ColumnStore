@@ -1,7 +1,6 @@
-﻿using System.Reflection;
+﻿namespace Outcompute.ColumnStore.CodeGenerator;
 
-namespace Outcompute.ColumnStore.CodeGenerator;
-
+/*
 internal class ModelDescriber : IModelDescriber
 {
     public ModelDescription Describe(Type model)
@@ -28,3 +27,4 @@ internal class ModelDescriber : IModelDescriber
         return new ModelDescription(model.Name, model.FullName, model.IsValueType, model.Assembly, props);
     }
 }
+*/

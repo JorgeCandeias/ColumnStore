@@ -1,6 +1,4 @@
-﻿using Outcompute.ColumnStore.CodeGeneration;
-using System.Collections.Concurrent;
-
+﻿/*
 namespace Outcompute.ColumnStore;
 
 /// <summary>
@@ -33,3 +31,4 @@ internal class ModelSupportFactory
 
     public ModelSupportFactory Default { get; } = new();
 }
+*/

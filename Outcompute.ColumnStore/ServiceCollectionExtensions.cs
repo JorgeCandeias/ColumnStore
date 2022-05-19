@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Outcompute.ColumnStore.CodeGenerator;
 
 namespace Outcompute.ColumnStore;
 
@@ -10,7 +9,7 @@ public static class ServiceCollectionExtensions
         Guard.IsNotNull(services, nameof(services));
 
         return services
-            .AddTransient<IModelDescriber, ModelDescriber>()
+            //.AddTransient<IModelDescriber, ModelDescriber>()
             .AddSingleton(typeof(IDeltaRowGroupFactory<>), typeof(DeltaRowGroupFactory<>));
     }
 }

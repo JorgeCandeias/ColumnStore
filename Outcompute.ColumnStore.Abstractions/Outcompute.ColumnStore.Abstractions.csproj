@@ -4,12 +4,12 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<LangVersion>Latest</LangVersion>
 		<RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions", ""))</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Diagnostics" Version="7.1.2" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0" />
 		<PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="4.0.0-preview1" />
 		<PackageReference Include="SonarAnalyzer.CSharp" Version="8.39.0.47922">
 			<PrivateAssets>all</PrivateAssets>
