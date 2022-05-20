@@ -7,13 +7,21 @@
 		<LangVersion>Latest</LangVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<NoWarn>1701;1702</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<NoWarn>1701;1702</NoWarn>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Diagnostics" Version="7.1.2" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="4.0.0-preview1">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Orleans.Serialization" Version="4.0.0-preview1" />
 		<PackageReference Include="SonarAnalyzer.CSharp" Version="8.39.0.47922">
@@ -24,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Outcompute.ColumnStore.Abstractions\Outcompute.ColumnStore.Abstractions.csproj" />
+		<ProjectReference Include="..\Outcompute.ColumnStore.Abstractions\Outcompute.ColumnStore.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

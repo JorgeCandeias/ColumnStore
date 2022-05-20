@@ -5,5 +5,7 @@
 /// </summary>
 internal interface IRowGroup<out TRow> : IReadOnlyCollection<TRow>
 {
+    int Id { get; }
+
     RowGroupState State { get; }
 }

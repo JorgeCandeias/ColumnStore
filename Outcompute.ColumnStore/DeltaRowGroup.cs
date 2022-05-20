@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using Orleans;
 using System.Collections;
+using System.Runtime.Serialization;
 
 namespace Outcompute.ColumnStore;
 
@@ -8,7 +9,8 @@ namespace Outcompute.ColumnStore;
 /// Holds an uncompressed group of rows.
 /// </summary>
 [GenerateSerializer]
-internal abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
+[Obsolete("This class supports code generated and is not for application use")]
+public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
 {
     private readonly ColumnStoreOptions _options;
 
@@ -26,26 +28,15 @@ internal abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
     public int Id { get; }
 
     [Id(2)]
-    protected IList<TRow> Rows = new List<TRow>();
-
-    [Id(3)]
     public RowGroupState State { get; private set; } = RowGroupState.Open;
 
-    protected IDictionary<string, DeltaColumnStats> Stats = new Dictionary<string, DeltaColumnStats>();
+    [Id(3)]
+    protected IList<TRow> Rows = new List<TRow>();
 
-    [Id(4)]
-    private IEnumerable<DeltaColumnStats> StatsSurrogate
-    {
-        get => Stats.Values;
-        set
-        {
-            Stats.Clear();
-            foreach (var item in value)
-            {
-                Stats[item.Name] = item;
-            }
-        }
-    }
+    /// <summary>
+    /// Gets distribution statistics about the stored data.
+    /// </summary>
+    public abstract IReadOnlyDictionary<string, DeltaColumnStats> GetStats();
 
     /// <summary>
     /// Verifies that this row group is open and throws if it is not.
