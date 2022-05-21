@@ -17,7 +17,8 @@ internal static class UsingsGenerator
             UsingDirective(ParseName("Microsoft.Extensions.Options")),
             UsingDirective(ParseName("System.CodeDom.Compiler")),
             UsingDirective(ParseName("System.Collections.Immutable")),
-            UsingDirective(ParseName("System.Runtime.Serialization"))
+            UsingDirective(ParseName("System.Runtime.Serialization")),
+            UsingDirective(ParseName("Orleans"))
         };
     }
 }

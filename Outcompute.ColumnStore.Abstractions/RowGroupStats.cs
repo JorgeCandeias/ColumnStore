@@ -1,16 +1,29 @@
 ﻿using Orleans;
+using System.Collections.Immutable;
 
 namespace Outcompute.ColumnStore;
 
+[Immutable]
 [GenerateSerializer]
-internal class RowGroupStats
+public record RowGroupStats(
+    [property: Id(1)] int Id,
+    [property: Id(2)] int RowCount,
+    [property: Id(3)] IReadOnlyDictionary<string, ColumnSegmentStats> ColumnSegmentStats)
 {
-    [Id(1)]
-    public int Id { get; set; }
+    public class Builder
+    {
+        internal Builder()
+        {
+        }
 
-    [Id(2)]
-    public int RowCount { get; set; }
+        public int Id { get; set; }
 
-    [Id(3)]
-    public ISet<ColumnSegmentStats> ColumnSegmentStats { get; } = new HashSet<ColumnSegmentStats>();
+        public int RowCount { get; set; }
+
+        public ImmutableDictionary<string, ColumnSegmentStats>.Builder ColumnSegmentStats { get; } = ImmutableDictionary.CreateBuilder<string, ColumnSegmentStats>();
+
+        public RowGroupStats ToImmutable() => new(Id, RowCount, ColumnSegmentStats.ToImmutable());
+    }
+
+    public static Builder CreateBuilder() => new();
 }

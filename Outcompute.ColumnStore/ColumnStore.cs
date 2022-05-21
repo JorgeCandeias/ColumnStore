@@ -1,36 +1,92 @@
-﻿using System.Collections;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using System.Collections;
 
 namespace Outcompute.ColumnStore;
 
-public class ColumnStore<TRow> : IReadOnlyCollection<TRow> where TRow : new()
+// todo: configure serialization
+public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 {
     private readonly RowGroupConverter<TRow> _converter = new();
-    private readonly DeltaStore<TRow> _delta;
+    private readonly IDeltaStore<TRow> _delta;
     private readonly List<CompressedRowGroup<TRow>> _groups = new();
+    private readonly ColumnStoreOptions _options;
+    private readonly ColumnStoreStats.Builder _stats = ColumnStoreStats.CreateBuilder();
 
-    public ColumnStore() : this(new ColumnStoreOptions())
+    public ColumnStore(int rowGroupSizeThreshold = 1_000_000)
     {
-        _delta = new DeltaStore<TRow>(new ColumnStoreOptions());
+        _options = new ColumnStoreOptions
+        {
+            RowGroupSizeThreshold = rowGroupSizeThreshold
+        };
+
+        _delta = ActivatorUtilities.CreateInstance<DeltaStore<TRow>>(FallbackServiceProvider.Default);
     }
 
-    public ColumnStore(ColumnStoreOptions options)
+    internal ColumnStore(IOptions<ColumnStoreOptions> options, IDeltaStore<TRow> delta)
     {
-        Guard.IsNotNull(options, nameof(options));
-
-        _delta = new DeltaStore<TRow>(options);
-
-        //ModelSupportFactory.ReadyTypes<TRow>();
+        _options = options.Value;
+        _delta = delta;
     }
 
     public int Count { get; private set; }
 
-    public void Add(TRow item)
+    private bool _invalidated;
+
+    private void UpdateStats()
     {
-        _delta.Add(item);
+        _stats.RowCount = Count;
+        _stats.DeltaStoreStats = _delta.GetStats();
+    }
+
+    public void Add(TRow row)
+    {
+        _delta.Add(row);
 
         Count++;
 
         TryCompact();
+
+        _invalidated = true;
+    }
+
+    public void AddRange(IEnumerable<TRow> rows)
+    {
+        Count += _delta.AddRange(rows);
+
+        TryCompact();
+
+        _invalidated = true;
+    }
+
+    public void Close()
+    {
+        _delta.Close();
+
+        // todo: compress row groups
+        throw new NotImplementedException();
+
+        _invalidated = true;
+    }
+
+    public void Rebuild()
+    {
+        // todo: rebuild row groups
+        throw new NotImplementedException();
+
+        _invalidated = true;
+    }
+
+    public ColumnStoreStats GetStats()
+    {
+        if (_invalidated)
+        {
+            UpdateStats();
+
+            _invalidated = false;
+        }
+
+        return _stats.ToImmutable();
     }
 
     public IEnumerator<TRow> GetEnumerator()

@@ -16,10 +16,8 @@ internal static class DeltaRowGroupGenerator
             namespace {type.GeneratedNamespace}
             {{
                 [GeneratedCode(""{nameof(DeltaRowGroupGenerator)}"", null)]
-                [Orleans.GenerateSerializer]
-                #pragma warning disable CS0618
+                [GenerateSerializer]
                 internal class {generatedTypeName}: {baseTypeName}
-                #pragma warning restore CS0618
                 {{
                     public {generatedTypeName}(int id, {optionsTypeName} options) : base(id, options)
                     {{
@@ -32,50 +30,27 @@ internal static class DeltaRowGroupGenerator
                         if (_{p.Name}Set.Add(row.{p.Name}))
                         {{
                             _{p.Name}Stats.DistinctValueCount = _{p.Name}Set.Count;
-                            _updated = true;
+                        }}
+
+                        if (row.{p.Name} == default)
+                        {{
+                            _{p.Name}Stats.DefaultValueCount++;
                         }}
                         ")}
-
-                        if (_updated)
-                        {{
-                            _stats.Clear();
-                        }}
                     }}
 
-                    [OnDeserialized]
-                    protected void OnDeserialized(StreamingContext context)
+                    protected override void OnUpdateStats()
                     {{
-                        _updated = true;
-                    }}
-
-                    public override IReadOnlyDictionary<string, DeltaColumnStats> GetStats()
-                    {{
-                        if (_updated)
-                        {{
-                            {type.Properties.Render(p => $@"_stats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
-
-                            _updated = false;
-                        }}
-
-                        return _stats.ToImmutable();
+                        {type.Properties.Render(p => $@"Stats.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
                     }}
 
                     {type.Properties.Render(p => $"private readonly {library.HashSet.Name}<{p.Type.ToDisplayString()}> _{p.Name}Set = new();")}
 
-                    {type.Properties.Render(p => $"private readonly DeltaColumnStats.Builder _{p.Name}Stats = DeltaColumnStats.CreateBuilder();")}
-
-                    private readonly ImmutableDictionary<string, DeltaColumnStats>.Builder _stats = ImmutableDictionary.CreateBuilder<string, DeltaColumnStats>();
-
-                    private bool _updated;
+                    {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}
                 }}
             }}
         ";
 
-        if (SyntaxFactory.ParseCompilationUnit(code).ChildNodes().First() is not MemberDeclarationSyntax syntax)
-        {
-            throw new InvalidOperationException($"Could not generate type '{generatedTypeName}' for {type.Symbol.ToDisplayString()}");
-        }
-
-        return syntax;
+        return SyntaxFactory.ParseCompilationUnit(code).ChildNodes().Cast<MemberDeclarationSyntax>().First();
     }
 }

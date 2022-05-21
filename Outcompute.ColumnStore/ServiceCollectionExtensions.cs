@@ -9,7 +9,8 @@ public static class ServiceCollectionExtensions
         Guard.IsNotNull(services, nameof(services));
 
         return services
-            //.AddTransient<IModelDescriber, ModelDescriber>()
-            .AddSingleton(typeof(IDeltaRowGroupFactory<>), typeof(DeltaRowGroupFactory<>));
+            .AddOptions()
+            .AddSingleton(typeof(IDeltaRowGroupFactory<>), typeof(DeltaRowGroupFactory<>))
+            .AddTransient(typeof(IDeltaStore<>), typeof(DeltaStore<>));
     }
 }

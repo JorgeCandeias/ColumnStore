@@ -2,39 +2,73 @@
 
 namespace Outcompute.ColumnStore;
 
-internal class DeltaStore<TRow> : IReadOnlyCollection<TRow>
+// todo: configure serialization
+internal class DeltaStore<TRow> : IDeltaStore<TRow>
 {
-    private readonly ColumnStoreOptions _options;
+    private readonly IDeltaRowGroupFactory<TRow> _deltaRowGroupFactory;
 
-    public DeltaStore(ColumnStoreOptions options)
+    public DeltaStore(IDeltaRowGroupFactory<TRow> deltaRowGroupFactory)
     {
-        Guard.IsNotNull(options, nameof(options));
+        Guard.IsNotNull(deltaRowGroupFactory, nameof(deltaRowGroupFactory));
 
-        _options = options;
-        //_active = new UncompressedRowGroup<TRow>(options);
+        _deltaRowGroupFactory = deltaRowGroupFactory;
+
+        _active = _deltaRowGroupFactory.Create(_ids++);
         _groups.Add(_active);
     }
 
-    private readonly HashSet<DeltaRowGroup<TRow>> _groups = new();
+    private readonly List<IRowGroup<TRow>> _groups = new();
 
-    private DeltaRowGroup<TRow> _active;
+    private IRowGroup<TRow> _active;
+
+    private bool _invalidated;
+
+    private int _ids;
 
     public int Count { get; private set; }
 
-    public void Add(TRow item)
+    public void Add(TRow row)
     {
-        _active.Add(item);
-
         if (_active.State == RowGroupState.Closed)
         {
-            //_active = new(_options);
+            _active = _deltaRowGroupFactory.Create(_ids++);
             _groups.Add(_active);
         }
+
+        _active.Add(row);
+
+        _invalidated = true;
 
         Count++;
     }
 
-    public bool TryTakeClosed(out DeltaRowGroup<TRow> group)
+    public int AddRange(IEnumerable<TRow> rows)
+    {
+        if (_active.State == RowGroupState.Closed)
+        {
+            _active = _deltaRowGroupFactory.Create(_ids++);
+            _groups.Add(_active);
+        }
+
+        var before = _active.Count;
+
+        _active.AddRange(rows);
+
+        var added = _active.Count - before;
+
+        Count += added;
+
+        _invalidated = true;
+
+        return added;
+    }
+
+    public void Close()
+    {
+        _active.Close();
+    }
+
+    public bool TryTakeClosed(out IRowGroup<TRow> group)
     {
         if (_groups.Count > 1)
         {
@@ -43,6 +77,11 @@ internal class DeltaStore<TRow> : IReadOnlyCollection<TRow>
                 if (item.State == RowGroupState.Closed)
                 {
                     _groups.Remove(item);
+
+                    _stats.RowCount -= item.Count;
+                    _stats.RowGroupStats.Remove(item.Id);
+                    _invalidated = true;
+
                     Count -= item.Count;
 
                     group = item;
@@ -53,6 +92,25 @@ internal class DeltaStore<TRow> : IReadOnlyCollection<TRow>
 
         group = default!;
         return false;
+    }
+
+    private readonly InnerStoreStats.Builder _stats = InnerStoreStats.CreateBuilder();
+
+    public InnerStoreStats GetStats()
+    {
+        if (_invalidated)
+        {
+            _stats.RowCount = Count;
+
+            foreach (var group in _groups)
+            {
+                _stats.RowGroupStats[group.Id] = group.GetStats();
+            }
+
+            _invalidated = false;
+        }
+
+        return _stats.ToImmutable();
     }
 
     public IEnumerator<TRow> GetEnumerator()

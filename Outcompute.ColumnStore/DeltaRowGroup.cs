@@ -9,7 +9,6 @@ namespace Outcompute.ColumnStore;
 /// Holds an uncompressed group of rows.
 /// </summary>
 [GenerateSerializer]
-[Obsolete("This class supports code generated and is not for application use")]
 public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
 {
     private readonly ColumnStoreOptions _options;
@@ -22,6 +21,7 @@ public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
         _options = options.Value;
 
         Id = id;
+        Stats.Id = id;
     }
 
     [Id(1)]
@@ -33,10 +33,48 @@ public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
     [Id(3)]
     protected IList<TRow> Rows = new List<TRow>();
 
+    protected RowGroupStats.Builder Stats { get; } = RowGroupStats.CreateBuilder();
+
+    /// <summary>
+    /// Updated by generated classes to signal statistics invalidation.
+    /// </summary>
+    protected bool _invalidated;
+
+    [OnDeserialized]
+    private void OnDeserialized(StreamingContext context)
+    {
+        UpdateStats();
+    }
+
+    /// <summary>
+    /// Updates row group and column statistics.
+    /// </summary>
+    private void UpdateStats()
+    {
+        Stats.RowCount = Rows.Count;
+
+        OnUpdateStats();
+    }
+
+    /// <summary>
+    /// Implemented by generated classes to update column statistics.
+    /// </summary>
+    protected abstract void OnUpdateStats();
+
     /// <summary>
     /// Gets distribution statistics about the stored data.
     /// </summary>
-    public abstract IReadOnlyDictionary<string, DeltaColumnStats> GetStats();
+    public RowGroupStats GetStats()
+    {
+        if (_invalidated)
+        {
+            UpdateStats();
+
+            _invalidated = false;
+        }
+
+        return Stats.ToImmutable();
+    }
 
     /// <summary>
     /// Verifies that this row group is open and throws if it is not.
@@ -78,6 +116,8 @@ public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
         OnAdded(row);
 
         TryClose();
+
+        _invalidated = true;
     }
 
     /// <summary>
@@ -96,6 +136,13 @@ public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
         }
 
         TryClose();
+
+        _invalidated = true;
+    }
+
+    public void Close()
+    {
+        State = RowGroupState.Closed;
     }
 
     public int Count => Rows.Count;

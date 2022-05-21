@@ -4,20 +4,25 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-internal class ColumnSegmentStats
+public record ColumnSegmentStats(
+    [property: Id(1)] string Name,
+    [property: Id(2)] int DistinctValueCount,
+    [property: Id(3)] int DefaultValueCount)
 {
-    [Id(1)]
-    public string ColumnName { get; set; } = "";
+    public class Builder
+    {
+        internal Builder()
+        {
+        }
 
-    [Id(2)]
-    public int RowCount { get; set; }
+        public string Name { get; set; } = "";
 
-    [Id(3)]
-    public int RangeCount { get; set; }
+        public int DistinctValueCount { get; set; }
 
-    [Id(4)]
-    public int DistinctValueCount { get; set; }
+        public int DefaultValueCount { get; set; }
 
-    [Id(5)]
-    public int DefaultValueCount { get; set; }
+        public ColumnSegmentStats ToImmutable() => new(Name, DistinctValueCount, DefaultValueCount);
+    }
+
+    public static Builder CreateBuilder() => new();
 }

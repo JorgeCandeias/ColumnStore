@@ -2,7 +2,7 @@
 
 internal class RowGroupConverter<TRow>
 {
-    public CompressedRowGroup<TRow> Convert(DeltaRowGroup<TRow> group)
+    public CompressedRowGroup<TRow> Convert(IRowGroup<TRow> group)
     {
         throw new NotImplementedException();
     }

@@ -6,7 +6,7 @@ var logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
-var cs = new ColumnStore<Book>(new ColumnStoreOptions { RowGroupSizeThreshold = 5 });
+var cs = new ColumnStore<Book>(5);
 
 cs.Add(new Book { Year = 1, Title = "A" });
 PrintStats();
@@ -44,7 +44,7 @@ void PrintStats()
     {
         logger.Information("{@Item}", item);
     }
-    //logger.Information("{@Stats}", cs.GetStats());
+    logger.Information("{@Stats}", cs.GetStats());
     logger.Information("");
 }
 
