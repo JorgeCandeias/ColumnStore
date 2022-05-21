@@ -53,10 +53,18 @@ namespace XPTO
     [ColumnStore]
     public record class Book()
     {
-        [ColumnStoreProperty]
+        [ColumnStoreProperty(typeof(ReverseComparer<>))]
         public int Year { get; set; } = 0;
 
         [ColumnStoreProperty]
         public string Title { get; set; } = "";
+    }
+
+    public class ReverseComparer<T> : Comparer<T>
+    {
+        public override int Compare(T? x, T? y)
+        {
+            return -Default.Compare(x, y);
+        }
     }
 }

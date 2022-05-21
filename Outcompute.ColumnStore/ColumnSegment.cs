@@ -1,49 +1,52 @@
-﻿namespace Outcompute.ColumnStore;
+﻿using System.Collections;
+
+namespace Outcompute.ColumnStore;
 
 /// <summary>
 /// A generic column segment that supports any type.
 /// </summary>
-internal class ColumnSegment<TValue> where TValue : IComparable<TValue>
+internal class ColumnSegment<TValue> : IColumnSegment<TValue>
 {
     public ColumnSegment(string propertyName)
     {
         PropertyName = propertyName;
     }
 
-    private readonly List<ColumnSegmentRange<TValue>> _ranges = new();
-
-    private ColumnSegmentRange<TValue>? _last;
+    private readonly Dictionary<TValue, List<ColumnSegmentRange>> _ranges = new();
 
     private int _count;
 
     public string PropertyName { get; }
 
+    public int Count => throw new NotImplementedException();
+
     public void Add(TValue value)
     {
-        throw new NotImplementedException();
-    }
-
-    public IEnumerable<TValue> EnumerateRows()
-    {
-        for (var i = 0; i < _ranges.Count; i++)
+        if (!_ranges.TryGetValue(value, out var ranges))
         {
-            var range = _ranges[i];
-
-            for (var j = range.Start; j < range.End; j++)
-            {
-                yield return range.Value;
-            }
+            _ranges[value] = ranges = new List<ColumnSegmentRange>();
         }
-    }
 
-    public IEnumerable<ColumnSegmentRange<TValue>> EnumerateRanges()
-    {
-        return _ranges;
+        var last = ranges[^1];
+
+        if (last.End == _count)
+        {
+            last.End += _count;
+            ranges[^1] = last;
+        }
     }
 
     public ColumnSegmentStats GetStats()
     {
-        //return new ColumnSegmentStats(PropertyName, _count, _ranges.Count);
+        // todo
         throw new NotImplementedException();
     }
+
+    public IEnumerator<TValue> GetEnumerator()
+    {
+        // todo
+        throw new NotImplementedException();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
