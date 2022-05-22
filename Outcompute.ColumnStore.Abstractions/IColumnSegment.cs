@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a sequence of values from a column.
 /// </summary>
-internal interface IColumnSegment<TValue> : IEnumerable<TValue>
+public interface IColumnSegment<out TValue> : IEnumerable<TValue>
 {
     ColumnSegmentStats GetStats();
 }

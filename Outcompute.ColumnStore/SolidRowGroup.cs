@@ -4,7 +4,7 @@ using System.Collections;
 namespace Outcompute.ColumnStore;
 
 [GenerateSerializer]
-internal abstract class SolidRowGroup<TRow> : ISolidRowGroup<TRow>
+public abstract class SolidRowGroup<TRow> : ISolidRowGroup<TRow>
 {
     protected SolidRowGroup(int id)
     {
