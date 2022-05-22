@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using Orleans.Serialization;
+using Orleans.Serialization.Session;
+using System.Collections;
 
 namespace Outcompute.ColumnStore;
 
@@ -7,45 +9,44 @@ namespace Outcompute.ColumnStore;
 /// </summary>
 internal class ColumnSegment<TValue> : IColumnSegment<TValue>
 {
-    public ColumnSegment(string propertyName)
+    private readonly byte[] _data;
+    private readonly ColumnSegmentStats _stats;
+    private readonly Serializer<ColumnSegmentHeader<TValue>> _headerSerializer;
+    private readonly Serializer<ColumnSegmentRange> _rangeSerializer;
+    private readonly SerializerSessionPool _sessions;
+
+    public ColumnSegment(byte[] data, ColumnSegmentStats stats, Serializer<ColumnSegmentHeader<TValue>> headerSerializer, Serializer<ColumnSegmentRange> rangeSerializer, SerializerSessionPool sessions)
     {
-        PropertyName = propertyName;
+        _data = data;
+        _stats = stats;
+        _headerSerializer = headerSerializer;
+        _rangeSerializer = rangeSerializer;
+        _sessions = sessions;
     }
 
-    private readonly Dictionary<TValue, List<ColumnSegmentRange>> _ranges = new();
+    public ColumnSegmentStats GetStats() => _stats;
 
-    private int _count;
-
-    public string PropertyName { get; }
-
-    public int Count => throw new NotImplementedException();
-
-    public void Add(TValue value)
-    {
-        if (!_ranges.TryGetValue(value, out var ranges))
-        {
-            _ranges[value] = ranges = new List<ColumnSegmentRange>();
-        }
-
-        var last = ranges[^1];
-
-        if (last.End == _count)
-        {
-            last.End += _count;
-            ranges[^1] = last;
-        }
-    }
-
-    public ColumnSegmentStats GetStats()
-    {
-        // todo
-        throw new NotImplementedException();
-    }
-
+    /// <summary>
+    /// Performs a full scan of the segment and yields every underlying source value as a regular collection would.
+    /// This is a low performance fallback for cases where the user query cannot be evaluated in a more efficient way.
+    /// </summary>
     public IEnumerator<TValue> GetEnumerator()
     {
-        // todo
-        throw new NotImplementedException();
+        using var session = _sessions.GetSession();
+        using var stream = new MemoryStream(_data);
+
+        while (stream.Position < stream.Length)
+        {
+            var header = _headerSerializer.Deserialize(stream);
+            for (var i = 0; i < header.RangeCount; i++)
+            {
+                var range = _rangeSerializer.Deserialize(stream);
+                for (var j = range.Start; j <= range.End; j++)
+                {
+                    yield return header.Value;
+                }
+            }
+        }
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
