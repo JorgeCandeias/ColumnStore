@@ -9,11 +9,5 @@ internal interface IRowGroup<TRow> : IReadOnlyCollection<TRow>
 
     RowGroupState State { get; }
 
-    void Add(TRow row);
-
-    void AddRange(IEnumerable<TRow> rows);
-
-    void Close();
-
     RowGroupStats GetStats();
 }

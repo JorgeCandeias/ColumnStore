@@ -17,9 +17,9 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
         _groups.Add(_active);
     }
 
-    private readonly List<IRowGroup<TRow>> _groups = new();
+    private readonly List<IDeltaRowGroup<TRow>> _groups = new();
 
-    private IRowGroup<TRow> _active;
+    private IDeltaRowGroup<TRow> _active;
 
     private bool _invalidated;
 

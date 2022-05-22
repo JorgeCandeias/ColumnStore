@@ -9,7 +9,7 @@ namespace Outcompute.ColumnStore;
 /// Holds an uncompressed group of rows.
 /// </summary>
 [GenerateSerializer]
-public abstract class DeltaRowGroup<TRow> : IRowGroup<TRow>
+public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 {
     private readonly ColumnStoreOptions _options;
 

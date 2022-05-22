@@ -31,5 +31,5 @@ internal class DeltaRowGroupFactory<TRow> : IDeltaRowGroupFactory<TRow>
         }
     }
 
-    public IRowGroup<TRow> Create(int id) => (IRowGroup<TRow>)_factory.Invoke(_provider, new object[] { id });
+    public IDeltaRowGroup<TRow> Create(int id) => (IDeltaRowGroup<TRow>)_factory.Invoke(_provider, new object[] { id });
 }
