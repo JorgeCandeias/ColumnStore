@@ -25,5 +25,20 @@ public record RowGroupStats(
         public RowGroupStats ToImmutable() => new(Id, RowCount, ColumnSegmentStats.ToImmutable());
     }
 
+    public Builder ToBuilder()
+    {
+        var builder = CreateBuilder();
+
+        builder.Id = Id;
+        builder.RowCount = RowCount;
+
+        foreach (var item in ColumnSegmentStats)
+        {
+            builder.ColumnSegmentStats[item.Key] = item.Value;
+        }
+
+        return builder;
+    }
+
     public static Builder CreateBuilder() => new();
 }

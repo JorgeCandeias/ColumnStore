@@ -3,6 +3,7 @@ using Orleans;
 using Orleans.Serialization;
 using Outcompute.ColumnStore;
 using Serilog;
+using System.Linq.Expressions;
 using XPTO;
 
 var logger = new LoggerConfiguration()
@@ -63,6 +64,22 @@ MeasureMemory(() => new Range2LN(1, null));
 MeasureMemory(() => new Range2LN(1, 1000));
 
 MeasureMemory(() => new[] { new Range1(1), new Range1(1000) });
+
+/*
+var list = new List<Book>();
+
+var listExp = Expression.Constant(list);
+
+Expression<Func<Book, int>> yearLambda = (Book x) => x.Year;
+
+var qqq = (Book x) => x.Year;
+
+foreach (var prop in new[] { "Year", "Title" })
+{
+    var order1 = Expression.Call(listExp, typeof(Enumerable).GetMethod(nameof(Enumerable.OrderBy))!, );
+}
+
+*/
 
 void MeasureMemory<T>(Func<T> create)
 {

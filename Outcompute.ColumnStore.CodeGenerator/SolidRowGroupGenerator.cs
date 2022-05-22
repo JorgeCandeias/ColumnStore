@@ -18,20 +18,17 @@ internal static class SolidRowGroupGenerator
                 [GenerateSerializer]
                 internal class {generatedTypeName}: {baseTypeName}
                 {{
-                    public {generatedTypeName}(int id) : base(id)
+                    public {generatedTypeName}(RowGroupStats stats, {type.Properties.Render(p => $"{library.IColumnSegment.Name}<{p.Type.ToDisplayString()}> {p.Name}{library.ColumnSegment.Name}", ",")})
+                        : base(stats)
                     {{
+                        {type.Properties.Render(p => $"_{p.Name}{library.ColumnSegment.Name} = {p.Name}{library.ColumnSegment.Name};")}
                     }}
 
-                    {type.Properties.Render(p => $"private readonly {library.IColumnSegment.Name}<{p.Type.ToDisplayString()}> _{p.Name}Segment;")}
-
-                    public override RowGroupStats GetStats()
-                    {{
-                        throw new NotImplementedException();
-                    }}
+                    {type.Properties.Render(p => $"private readonly {library.IColumnSegment.Name}<{p.Type.ToDisplayString()}> _{p.Name}{library.ColumnSegment.Name};")}
 
                     public override IEnumerator<{type.Symbol.ToDisplayString()}> GetEnumerator()
                     {{
-                        {type.Properties.Render(p => $"var {p.Name}Enumerator = _{p.Name}Segment.GetEnumerator();")}
+                        {type.Properties.Render(p => $"var {p.Name}Enumerator = _{p.Name}{library.ColumnSegment.Name}.GetEnumerator();")}
 
                         while ({type.Properties.Render(p => $"{p.Name}Enumerator.MoveNext()", " && ")})
                         {{

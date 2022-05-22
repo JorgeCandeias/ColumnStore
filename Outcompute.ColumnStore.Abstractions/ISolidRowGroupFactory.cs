@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface ISolidRowGroupFactory<TRow>
+public interface ISolidRowGroupFactory<TRow>
 {
-    ISolidRowGroup<TRow> Create(int id, IEnumerable<TRow> rows);
+    ISolidRowGroup<TRow> Create(IRowGroup<TRow> source);
 }

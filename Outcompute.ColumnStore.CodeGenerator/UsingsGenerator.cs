@@ -10,6 +10,7 @@ internal static class UsingsGenerator
         return new UsingDirectiveSyntax[]
         {
             UsingDirective(ParseName("System")),
+            UsingDirective(ParseName("System.Linq")),
             UsingDirective(ParseName("System.Collections.Generic")),
             UsingDirective(ParseName("Outcompute.ColumnStore")),
             UsingDirective(ParseName("CommunityToolkit.Diagnostics")),

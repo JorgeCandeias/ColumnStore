@@ -29,9 +29,9 @@ internal class SolidRowGroupFactory<TRow> : ISolidRowGroupFactory<TRow>
         }
     }
 
-    public ISolidRowGroup<TRow> Create(int id, IEnumerable<TRow> rows)
+    public ISolidRowGroup<TRow> Create(IRowGroup<TRow> source)
     {
         // defer to the generated factory
-        return _factory.Create(id, rows);
+        return _factory.Create(source);
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface IColumnSegmentBuilderFactory<TValue>
+public interface IColumnSegmentBuilderFactory<TValue>
 {
     IColumnSegmentBuilder<TValue> Create(IComparer<TValue> comparer);
 }

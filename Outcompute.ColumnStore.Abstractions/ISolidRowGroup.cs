@@ -1,5 +1,5 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface ISolidRowGroup<TRow> : IRowGroup<TRow>
+public interface ISolidRowGroup<TRow> : IRowGroup<TRow>
 {
 }

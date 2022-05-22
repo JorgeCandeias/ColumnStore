@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface IColumnSegmentBuilder<TValue>
+public interface IColumnSegmentBuilder<TValue>
 {
     void Add(TValue value);
 

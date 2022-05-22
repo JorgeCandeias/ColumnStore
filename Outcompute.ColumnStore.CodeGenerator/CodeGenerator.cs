@@ -34,11 +34,11 @@ internal static class CodeGenerator
                 descriptor.Properties.Add(property);
             }
 
-            // generate the delta row group for this model
-            unit = unit.AddMembers(DeltaRowGroupGenerator.Generate(descriptor, library));
-
-            // generate the solid row group for this model
-            unit = unit.AddMembers(SolidRowGroupGenerator.Generate(descriptor, library));
+            // generate code for this model
+            unit = unit
+                .AddMembers(DeltaRowGroupGenerator.Generate(descriptor, library))
+                .AddMembers(SolidRowGroupGenerator.Generate(descriptor, library))
+                .AddMembers(SolidRowGroupFactoryGenerator.Generate(descriptor, library));
         }
 
         return unit;
