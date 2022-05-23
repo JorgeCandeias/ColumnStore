@@ -21,7 +21,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
 
     private IDeltaRowGroup<TRow> _active;
 
-    private bool _invalidated;
+    private bool _invalidated = true;
 
     private int _ids;
 

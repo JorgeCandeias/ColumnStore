@@ -25,7 +25,7 @@ internal static class CodeGenerator
             // create a flat model description to make code generation easier
             var descriptor = new ColumnStoreTypeDescription
             {
-                GeneratedNamespace = $"{item.ContainingNamespace.ToDisplayString()}.GeneratedCode",
+                GeneratedNamespace = $"{item.ContainingNamespace.ToDisplayString()}.ColumnStoreCodeGen",
                 Symbol = item,
             };
 

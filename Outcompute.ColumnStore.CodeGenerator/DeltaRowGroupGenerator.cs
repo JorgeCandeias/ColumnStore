@@ -8,7 +8,7 @@ internal static class DeltaRowGroupGenerator
     public static MemberDeclarationSyntax Generate(ColumnStoreTypeDescription type, LibraryTypes library)
     {
         var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup.Name}";
-        var baseTypeName = $"{library.DeltaRowGroup.Name}<{type.Symbol.Name}>";
+        var baseTypeName = library.DeltaRowGroup.ToDisplayString().Replace("<TRow>", $"<{type.Symbol.ToDisplayString()}>");
         var optionsTypeName = $"{library.IOptions.Name}<{library.ColumnStoreOptions.Name}>";
 
         var code = $@"
@@ -23,7 +23,7 @@ internal static class DeltaRowGroupGenerator
 
                     {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}
 
-                    public {generatedTypeName}(int id, {optionsTypeName} options) : base(id, options)
+                    public {generatedTypeName}(int id, {optionsTypeName} options, {library.Serializer1.ToDisplayString().Replace("<T>", $"<{type.Symbol.ToDisplayString()}>")} serializer, {library.SerializerSessionPool.ToDisplayString()} sessions) : base(id, options, serializer, sessions)
                     {{
                         {type.Properties.Render(p => @$"_{p.Name}Stats.Name = ""{p.Name}"";")}
                     }}
@@ -47,8 +47,6 @@ internal static class DeltaRowGroupGenerator
                     {{
                         {type.Properties.Render(p => $@"builder.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
                     }}
-
-
                 }}
             }}
         ";

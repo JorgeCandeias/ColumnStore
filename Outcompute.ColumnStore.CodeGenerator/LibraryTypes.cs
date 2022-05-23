@@ -29,6 +29,8 @@ internal class LibraryTypes
             ColumnStoreOptions = Type("Outcompute.ColumnStore.ColumnStoreOptions"),
             HashSet = Type("System.Collections.Generic.HashSet`1"),
             IOptions = Type("Microsoft.Extensions.Options.IOptions`1"),
+            SerializerSessionPool = Type("Orleans.Serialization.Session.SerializerSessionPool"),
+            Serializer1 = Type("Orleans.Serialization.Serializer`1")
         };
 
         INamedTypeSymbol Type(string fullyQualifiedMetadataName)
@@ -59,4 +61,6 @@ internal class LibraryTypes
     public INamedTypeSymbol ColumnStoreOptions { get; private set; } = null!;
     public INamedTypeSymbol HashSet { get; private set; } = null!;
     public INamedTypeSymbol IOptions { get; private set; } = null!;
+    public INamedTypeSymbol SerializerSessionPool { get; private set; } = null!;
+    public INamedTypeSymbol Serializer1 { get; private set; } = null;
 }

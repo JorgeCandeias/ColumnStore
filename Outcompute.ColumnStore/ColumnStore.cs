@@ -9,9 +9,7 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 {
     private readonly RowGroupConverter<TRow> _converter = new();
     private readonly IDeltaStore<TRow> _delta;
-    private readonly List<CompressedRowGroup<TRow>> _groups = new();
     private readonly ColumnStoreOptions _options;
-    private readonly ColumnStoreStats.Builder _stats = ColumnStoreStats.CreateBuilder();
 
     public ColumnStore(int rowGroupSizeThreshold = 1_000_000)
     {
@@ -31,12 +29,20 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 
     public int Count { get; private set; }
 
-    private bool _invalidated;
+    private ColumnStoreStats? _stats;
 
-    private void UpdateStats()
+    private void ClearStats() => _stats = null;
+
+    public IColumnStoreStats Stats => _stats ??= BuildStats();
+
+    private ColumnStoreStats BuildStats()
     {
-        _stats.RowCount = Count;
-        _stats.DeltaStoreStats = _delta.GetStats();
+        var builder = ColumnStoreStats.CreateBuilder();
+
+        builder.RowCount = Count;
+        builder.DeltaStoreStats = _delta.GetStats();
+
+        return builder.ToImmutable();
     }
 
     public void Add(TRow row)
@@ -47,7 +53,7 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 
         TryCompact();
 
-        _invalidated = true;
+        ClearStats();
     }
 
     public void AddRange(IEnumerable<TRow> rows)
@@ -56,17 +62,16 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 
         TryCompact();
 
-        _invalidated = true;
+        ClearStats();
     }
 
     public void Close()
     {
         _delta.Close();
 
-        // todo: compress row groups
-        throw new NotImplementedException();
+        // todo: migrate
 
-        _invalidated = true;
+        ClearStats();
     }
 
     public void Rebuild()
@@ -74,32 +79,14 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
         // todo: rebuild row groups
         throw new NotImplementedException();
 
-        _invalidated = true;
-    }
-
-    public ColumnStoreStats GetStats()
-    {
-        if (_invalidated)
-        {
-            UpdateStats();
-
-            _invalidated = false;
-        }
-
-        return _stats.ToImmutable();
+        ClearStats();
     }
 
     public IEnumerator<TRow> GetEnumerator()
     {
-        Console.WriteLine("Enumerating Compressed...");
+        Console.WriteLine("Enumerating Solid...");
 
-        foreach (var group in _groups)
-        {
-            foreach (var row in group)
-            {
-                yield return row;
-            }
-        }
+        // todo
 
         Console.WriteLine("Enumerating Delta...");
 
@@ -116,7 +103,7 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
         // todo: the compression process is expensive when it happens and should run in the background
         if (_delta.TryTakeClosed(out var group))
         {
-            _groups.Add(_converter.Convert(group));
+            // todo
         }
     }
 }

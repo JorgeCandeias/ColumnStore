@@ -125,19 +125,19 @@ void PrintStats()
     {
         logger.Information("{@Item}", item);
     }
-    logger.Information("{@Stats}", cs.GetStats());
+    logger.Information("{@Stats}", cs.Stats);
     logger.Information("");
 }
 
 namespace XPTO
 {
-    [ColumnStore]
+    [GenerateSerializer, ColumnStore]
     public record class Book()
     {
-        [ColumnStoreProperty(typeof(ReverseComparer<>))]
+        [Id(1), ColumnStoreProperty(typeof(ReverseComparer<>))]
         public int Year { get; set; } = 0;
 
-        [ColumnStoreProperty]
+        [Id(2), ColumnStoreProperty]
         public string Title { get; set; } = "";
     }
 

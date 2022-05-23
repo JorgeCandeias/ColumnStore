@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Orleans.Serialization;
 
 namespace Outcompute.ColumnStore;
 
@@ -10,5 +11,6 @@ internal static class FallbackServiceProvider
 {
     public static IServiceProvider Default { get; } = new ServiceCollection()
         .AddColumnStore()
+        .AddSerializer()
         .BuildServiceProvider();
 }

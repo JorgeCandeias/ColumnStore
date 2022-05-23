@@ -26,4 +26,9 @@ public interface IColumnStore<TRow> : IReadOnlyCollection<TRow>
     /// Rebuilds the entire data set into a single compressed row group.
     /// </summary>
     void Rebuild();
+
+    /// <summary>
+    /// Statistics about the columnstore data and layout.
+    /// </summary>
+    IColumnStoreStats Stats { get; }
 }

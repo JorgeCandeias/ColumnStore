@@ -14,7 +14,7 @@ internal class DeltaRowGroupFactory<TRow> : IDeltaRowGroupFactory<TRow>
         _provider = provider;
 
         var modelType = typeof(TRow);
-        var generatedTypeName = $"{modelType.Namespace}.GeneratedCode.{modelType.Name}DeltaRowGroup";
+        var generatedTypeName = $"{modelType.Namespace}.ColumnStoreCodeGen.{modelType.Name}DeltaRowGroup";
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {

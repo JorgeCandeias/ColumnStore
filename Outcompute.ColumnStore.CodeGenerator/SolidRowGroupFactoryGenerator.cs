@@ -8,7 +8,7 @@ internal static class SolidRowGroupFactoryGenerator
     public static MemberDeclarationSyntax Generate(ColumnStoreTypeDescription type, LibraryTypes library)
     {
         var generatedTypeName = $"{type.Symbol.Name}{library.SolidRowGroupFactory.Name}";
-        var baseTypeName = $"{library.ISolidRowGroupFactory.Name}<{type.Symbol.Name}>";
+        var baseTypeName = library.ISolidRowGroupFactory.ToDisplayString().Replace("<TRow>", $"<{type.Symbol.ToDisplayString()}>");
 
         var code = $@"
 

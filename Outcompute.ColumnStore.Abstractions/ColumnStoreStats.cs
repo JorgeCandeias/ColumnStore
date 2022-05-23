@@ -4,11 +4,17 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-public record ColumnStoreStats(
-    [property: Id(1)] int RowCount,
-    [property: Id(2)] InnerStoreStats DeltaStoreStats,
-    [property: Id(3)] InnerStoreStats SolidStoreStats)
+public class ColumnStoreStats : IColumnStoreStats
 {
+    [Id(1)]
+    public int RowCount { get; init; }
+
+    [Id(2)]
+    public IInnerStoreStats DeltaStoreStats { get; init; } = InnerStoreStats.Empty;
+
+    [Id(3)]
+    public IInnerStoreStats SolidStoreStats { get; init; } = InnerStoreStats.Empty;
+
     public class Builder
     {
         internal Builder()
@@ -19,9 +25,14 @@ public record ColumnStoreStats(
 
         public InnerStoreStats DeltaStoreStats { get; set; } = InnerStoreStats.Empty;
 
-        public InnerStoreStats.Builder SolidStoreStats { get; } = InnerStoreStats.CreateBuilder();
+        public InnerStoreStats SolidStoreStats { get; set; } = InnerStoreStats.Empty;
 
-        public ColumnStoreStats ToImmutable() => new(RowCount, DeltaStoreStats, SolidStoreStats.ToImmutable());
+        public ColumnStoreStats ToImmutable() => new()
+        {
+            RowCount = RowCount,
+            DeltaStoreStats = DeltaStoreStats,
+            SolidStoreStats = SolidStoreStats
+        };
     }
 
     public static Builder CreateBuilder() => new();
