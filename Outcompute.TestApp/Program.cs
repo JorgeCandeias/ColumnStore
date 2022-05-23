@@ -3,7 +3,6 @@ using Orleans;
 using Orleans.Serialization;
 using Outcompute.ColumnStore;
 using Serilog;
-using System.Linq.Expressions;
 using XPTO;
 
 var logger = new LoggerConfiguration()

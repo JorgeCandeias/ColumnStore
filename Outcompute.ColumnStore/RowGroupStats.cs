@@ -5,11 +5,21 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-public record RowGroupStats(
-    [property: Id(1)] int Id,
-    [property: Id(2)] int RowCount,
-    [property: Id(3)] IReadOnlyDictionary<string, ColumnSegmentStats> ColumnSegmentStats)
+public class RowGroupStats : IRowGroupStats
 {
+    private RowGroupStats()
+    {
+    }
+
+    [Id(1)]
+    public int Id { get; init; }
+
+    [Id(2)]
+    public int RowCount { get; init; }
+
+    [Id(3)]
+    public IReadOnlyDictionary<string, ColumnSegmentStats> ColumnSegmentStats { get; init; } = null!;
+
     public class Builder
     {
         internal Builder()
@@ -22,7 +32,12 @@ public record RowGroupStats(
 
         public ImmutableDictionary<string, ColumnSegmentStats>.Builder ColumnSegmentStats { get; } = ImmutableDictionary.CreateBuilder<string, ColumnSegmentStats>();
 
-        public RowGroupStats ToImmutable() => new(Id, RowCount, ColumnSegmentStats.ToImmutable());
+        public RowGroupStats ToImmutable() => new()
+        {
+            Id = Id,
+            RowCount = RowCount,
+            ColumnSegmentStats = ColumnSegmentStats.ToImmutable()
+        };
     }
 
     public Builder ToBuilder()
@@ -41,4 +56,11 @@ public record RowGroupStats(
     }
 
     public static Builder CreateBuilder() => new();
+
+    public static RowGroupStats Empty { get; } = new()
+    {
+        Id = 0,
+        RowCount = 0,
+        ColumnSegmentStats = ImmutableDictionary<string, ColumnSegmentStats>.Empty
+    };
 }

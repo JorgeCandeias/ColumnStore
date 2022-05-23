@@ -104,7 +104,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
 
             foreach (var group in _groups)
             {
-                _stats.RowGroupStats[group.Id] = group.GetStats();
+                _stats.RowGroupStats[group.Id] = group.Stats;
             }
 
             _invalidated = false;

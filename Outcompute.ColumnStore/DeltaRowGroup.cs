@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Orleans;
 using System.Collections;
-using System.Runtime.Serialization;
 
 namespace Outcompute.ColumnStore;
 
@@ -21,7 +20,6 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         _options = options.Value;
 
         Id = id;
-        Stats.Id = id;
     }
 
     [Id(1)]
@@ -30,51 +28,50 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     [Id(2)]
     public RowGroupState State { get; private set; } = RowGroupState.Open;
 
+    // todo: this needs to be compressed by row
     [Id(3)]
     protected IList<TRow> Rows = new List<TRow>();
 
-    protected RowGroupStats.Builder Stats { get; } = RowGroupStats.CreateBuilder();
+    [Id(4)]
+    private RowGroupStats? _stats;
 
-    /// <summary>
-    /// Updated by generated classes to signal statistics invalidation.
-    /// </summary>
-    protected bool _invalidated;
-
-    [OnDeserialized]
-    private void OnDeserialized(StreamingContext context)
+    public IRowGroupStats Stats
     {
-        UpdateStats();
+        get
+        {
+            if (_stats is null)
+            {
+                _stats = BuildStats();
+            }
+
+            return _stats;
+        }
+    }
+
+    private void Invalidate()
+    {
+        _stats = null;
     }
 
     /// <summary>
     /// Updates row group and column statistics.
     /// </summary>
-    private void UpdateStats()
+    private RowGroupStats BuildStats()
     {
-        Stats.RowCount = Rows.Count;
+        var builder = RowGroupStats.CreateBuilder();
 
-        OnUpdateStats();
+        builder.Id = Id;
+        builder.RowCount = Rows.Count;
+
+        OnBuildStats(builder);
+
+        return builder.ToImmutable();
     }
 
     /// <summary>
     /// Implemented by generated classes to update column statistics.
     /// </summary>
-    protected abstract void OnUpdateStats();
-
-    /// <summary>
-    /// Gets distribution statistics about the stored data.
-    /// </summary>
-    public RowGroupStats GetStats()
-    {
-        if (_invalidated)
-        {
-            UpdateStats();
-
-            _invalidated = false;
-        }
-
-        return Stats.ToImmutable();
-    }
+    protected abstract void OnBuildStats(RowGroupStats.Builder builder);
 
     /// <summary>
     /// Verifies that this row group is open and throws if it is not.
@@ -99,7 +96,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     }
 
     /// <summary>
-    /// Used by generated classes to update the live stats upon adding a row.
+    /// Used by generated classes to update the live statistic helpers upon adding a row.
     /// </summary>
     protected abstract void OnAdded(TRow row);
 
@@ -117,7 +114,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 
         TryClose();
 
-        _invalidated = true;
+        Invalidate();
     }
 
     /// <summary>
@@ -137,9 +134,12 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 
         TryClose();
 
-        _invalidated = true;
+        Invalidate();
     }
 
+    /// <summary>
+    /// Marks the row group as closed so no additional rows are accepted.
+    /// </summary>
     public void Close()
     {
         State = RowGroupState.Closed;

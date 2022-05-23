@@ -19,6 +19,10 @@ internal static class DeltaRowGroupGenerator
                 [GenerateSerializer]
                 internal class {generatedTypeName}: {baseTypeName}
                 {{
+                    {type.Properties.Render(p => $"private readonly {library.HashSet.Name}<{p.Type.ToDisplayString()}> _{p.Name}Set = new();")}
+
+                    {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}
+
                     public {generatedTypeName}(int id, {optionsTypeName} options) : base(id, options)
                     {{
                         {type.Properties.Render(p => @$"_{p.Name}Stats.Name = ""{p.Name}"";")}
@@ -39,14 +43,12 @@ internal static class DeltaRowGroupGenerator
                         ")}
                     }}
 
-                    protected override void OnUpdateStats()
+                    protected override void OnBuildStats(RowGroupStats.Builder builder)
                     {{
-                        {type.Properties.Render(p => $@"Stats.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
+                        {type.Properties.Render(p => $@"builder.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
                     }}
 
-                    {type.Properties.Render(p => $"private readonly {library.HashSet.Name}<{p.Type.ToDisplayString()}> _{p.Name}Set = new();")}
 
-                    {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}
                 }}
             }}
         ";

@@ -18,8 +18,8 @@ internal static class SolidRowGroupGenerator
                 [GenerateSerializer]
                 internal class {generatedTypeName}: {baseTypeName}
                 {{
-                    public {generatedTypeName}(RowGroupStats stats, {type.Properties.Render(p => $"{library.IColumnSegment.Name}<{p.Type.ToDisplayString()}> {p.Name}{library.ColumnSegment.Name}", ",")})
-                        : base(stats)
+                    public {generatedTypeName}(int id, IRowGroupStats stats, {type.Properties.Render(p => $"{library.IColumnSegment.Name}<{p.Type.ToDisplayString()}> {p.Name}{library.ColumnSegment.Name}", ",")})
+                        : base(id, stats)
                     {{
                         {type.Properties.Render(p => $"_{p.Name}{library.ColumnSegment.Name} = {p.Name}{library.ColumnSegment.Name};")}
                     }}

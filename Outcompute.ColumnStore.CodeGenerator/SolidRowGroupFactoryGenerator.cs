@@ -33,7 +33,7 @@ internal static class SolidRowGroupFactoryGenerator
                         {type.Properties.Render(p => $"var {p.Name}{library.ColumnSegmentBuilder.Name} = _{p.Name}{library.ColumnSegmentBuilderFactory.Name}.Create(Comparer<{p.Type.ToDisplayString()}>.Default);")}
 
                         // get source stats to optimize ordering
-                        var order = rows.GetStats().ColumnSegmentStats.Values.OrderBy(x => x.DistinctValueCount).Select(x => x.Name).ToList();
+                        var order = rows.Stats.ColumnSegmentStats.Values.OrderBy(x => x.DistinctValueCount).Select(x => x.Name).ToList();
 
                         // order the source data by cardinality to optimize compression
                         IOrderedEnumerable<{type.Symbol.ToDisplayString()}> ordered = null!;
@@ -61,14 +61,8 @@ internal static class SolidRowGroupFactoryGenerator
                         // close the column segments
                         {type.Properties.Render(p => $"var {p.Name}{library.ColumnSegment.Name} = {p.Name}{library.ColumnSegmentBuilder.Name}.ToImmutable();")}
 
-                        // stats remain fixed for solid row groups
-                        var statsb = rows.GetStats().ToBuilder();
-                        {type.Properties.Render(p => @$"statsb.ColumnSegmentStats[""{p.Name}""] = {p.Name}{library.ColumnSegment.Name}.GetStats();")}
-
-                        var stats = statsb.ToImmutable();
-
                         // create the solid row group
-                        return new {type.Symbol.Name}{library.SolidRowGroup.Name}(stats, {type.Properties.Render(p => $"{p.Name}{library.ColumnSegment.Name}", ",")});
+                        return new {type.Symbol.Name}{library.SolidRowGroup.Name}(rows.Id, rows.Stats, {type.Properties.Render(p => $"{p.Name}{library.ColumnSegment.Name}", ",")});
                     }}
                 }}
             }}

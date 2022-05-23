@@ -6,23 +6,24 @@ namespace Outcompute.ColumnStore;
 [GenerateSerializer]
 public abstract class SolidRowGroup<TRow> : ISolidRowGroup<TRow>
 {
-    private readonly RowGroupStats _stats;
-
-    protected SolidRowGroup(RowGroupStats stats)
+    protected SolidRowGroup(int id, IRowGroupStats stats)
     {
         Guard.IsNotNull(stats, nameof(stats));
 
-        _stats = stats;
+        Id = id;
+        Stats = stats;
     }
 
     [Id(1)]
     public int Id { get; }
 
+    [Id(2)]
     public RowGroupState State => RowGroupState.Solid;
 
-    public int Count => _stats.RowCount;
+    [Id(3)]
+    public IRowGroupStats Stats { get; }
 
-    public RowGroupStats GetStats() => _stats;
+    public int Count => Stats.RowCount;
 
     public abstract IEnumerator<TRow> GetEnumerator();
 
