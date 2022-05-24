@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
@@ -11,8 +11,8 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
 		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="4.0.0-preview1">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Orleans.Serialization" Version="4.0.0-preview1" />
 		<PackageReference Include="xunit" Version="2.4.1" />
@@ -30,5 +30,9 @@
 		<ProjectReference Include="..\Outcompute.ColumnStore\Outcompute.ColumnStore.csproj" />
 		<ProjectReference Include="..\Outcompute.ColumnStore.CodeGenerator\Outcompute.ColumnStore.CodeGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
+
+	<PropertyGroup>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+	</PropertyGroup>
 
 </Project>

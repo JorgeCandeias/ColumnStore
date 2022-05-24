@@ -20,4 +20,22 @@ internal static class HelperExtensions
 
         return builder.ToString();
     }
+
+    public static string Render<T>(this IEnumerable<T> items, Func<T, int, string> render, string separator = "\r\n")
+    {
+        var builder = new StringBuilder();
+
+        var i = 0;
+        foreach (var item in items)
+        {
+            if (builder.Length > 0)
+            {
+                builder.Append(separator);
+            }
+
+            builder.Append(render(item, i++));
+        }
+
+        return builder.ToString();
+    }
 }

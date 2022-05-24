@@ -24,72 +24,42 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         Guard.IsNotNull(options, nameof(options));
         Guard.IsNotNull(serializer, nameof(serializer));
 
+        _id = id;
         _options = options.Value;
         _serializer = serializer;
         _sessions = sessions;
-
-        Id = id;
     }
 
+    #region State
+
     [Id(1)]
-    public int Id { get; }
+    private readonly int _id;
 
     [Id(2)]
-    public RowGroupState State { get; private set; } = RowGroupState.Open;
+    private RowGroupState _state = RowGroupState.Open;
 
     [Id(3)]
     private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
 
-    /*
-    [Id(3)]
-    private ReadOnlySequence<byte> DataBytes
-    {
-        get
-        {
-            return _data.GetReadOnlySequence();
-        }
-        set
-        {
-            Guard.IsLessThanOrEqualTo(value.Length, int.MaxValue, nameof(value));
-
-            _data.SetLength(value.Length);
-            _data.Position = 0;
-
-            var length = value.Length;
-            var copied = 0;
-
-            while (copied < length)
-            {
-                var buffer = _data.GetSpan();
-                var take = (int)Math.Min(buffer.Length, length - copied);
-                value.CopyTo(buffer);
-                _data.Advance(take);
-
-                value = value.Slice(take);
-                copied += take;
-            }
-        }
-    }
-    */
-
     [Id(4)]
     private RowGroupStats? _stats;
 
-    public IRowGroupStats Stats
-    {
-        get
-        {
-            if (_stats is null)
-            {
-                _stats = BuildStats();
-            }
-
-            return _stats;
-        }
-    }
-
     [Id(5)]
-    public int Count { get; private set; }
+    private int _count;
+
+    #endregion State
+
+    #region IDeltaRowGroup
+
+    public int Id => _id;
+
+    public RowGroupState State => _state;
+
+    public IRowGroupStats Stats => _stats ??= BuildStats();
+
+    public int Count => _count;
+
+    #endregion IDeltaRowGroup
 
     private void Invalidate()
     {
@@ -134,7 +104,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     {
         if (Count >= _options.RowGroupSizeThreshold)
         {
-            State = RowGroupState.Closed;
+            _state = RowGroupState.Closed;
         }
     }
 
@@ -159,7 +129,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     {
         _serializer.Serialize(row, _data);
 
-        Count++;
+        _count++;
     }
 
     /// <summary>
@@ -192,7 +162,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     /// </summary>
     public void Close()
     {
-        State = RowGroupState.Closed;
+        _state = RowGroupState.Closed;
     }
 
     public IEnumerator<TRow> GetEnumerator()
@@ -200,16 +170,18 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         using var session = _sessions.GetSession();
         var sequence = _data.GetReadOnlySequence();
 
-        var position = 0;
+        var position = 0L;
         var length = sequence.Length;
 
         while (position < length)
         {
-            // create a new reader per iteration as ref structs cant be used after yielding
+            // create a new reader per loop as ref structs cannot be used after yielding
             var reader = Reader.Create(sequence, session);
             reader.Skip(position);
+            var result = _serializer.Deserialize(ref reader);
+            position = reader.Position;
 
-            yield return _serializer.Deserialize(ref reader);
+            yield return result;
         }
     }
 
