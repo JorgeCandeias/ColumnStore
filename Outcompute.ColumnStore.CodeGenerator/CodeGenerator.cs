@@ -13,12 +13,6 @@ internal static class CodeGenerator
         // generate the using directives for the code file
         unit = unit.AddUsings(UsingsGenerator.Generate());
 
-        // generate assembly attributes
-        unit = unit.AddAttributeLists(IgnoreAccessChecksToAttributeGenerator.GenerateAttributes());
-
-        // generate the internal access attribute
-        unit = unit.AddMembers(IgnoreAccessChecksToAttributeGenerator.GenerateMembers());
-
         // run code generation for each user model
         foreach (var item in model.ColumnStoreTypes)
         {
