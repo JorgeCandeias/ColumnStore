@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface IDeltaStore<TRow> : IReadOnlyCollection<TRow>
+public interface IDeltaStore<TRow> : IReadOnlyCollection<TRow>
 {
     void Add(TRow row);
 

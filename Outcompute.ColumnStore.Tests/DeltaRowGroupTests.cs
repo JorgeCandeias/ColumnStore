@@ -20,7 +20,8 @@ public class DeltaRowGroupTests
         _generatedType = FindType($"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}");
     }
 
-    private IDeltaRowGroup<TestModel> Create(int id) => (IDeltaRowGroup<TestModel>)ActivatorUtilities.CreateInstance(_provider, _generatedType, id);
+    private IDeltaRowGroup<TestModel> Create(int id, ColumnStoreOptions options) =>
+        (IDeltaRowGroup<TestModel>)ActivatorUtilities.CreateInstance(_provider, _generatedType, id, options);
 
     private readonly TestModel[] _data = new[]
     {
@@ -52,7 +53,7 @@ public class DeltaRowGroupTests
         var id = 123;
 
         //act
-        var rows = Create(id);
+        var rows = Create(id, new ColumnStoreOptions());
 
         // assert empty state
         Assert.Equal(id, rows.Id);
@@ -93,7 +94,7 @@ public class DeltaRowGroupTests
     public void AddsOne()
     {
         // arrange
-        var rows = Create(123);
+        var rows = Create(123, new ColumnStoreOptions());
 
         // act
         foreach (var item in _data)
@@ -136,7 +137,7 @@ public class DeltaRowGroupTests
     public void AddsMany()
     {
         // arrange
-        var rows = Create(123);
+        var rows = Create(123, new ColumnStoreOptions());
 
         // act
         rows.AddRange(_data);

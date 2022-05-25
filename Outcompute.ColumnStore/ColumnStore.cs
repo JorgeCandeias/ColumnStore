@@ -11,6 +11,9 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
     private readonly IDeltaStore<TRow> _delta;
     private readonly ColumnStoreOptions _options;
 
+    /// <summary>
+    /// Simple constructor for collection-like usage.
+    /// </summary>
     public ColumnStore(int rowGroupSizeThreshold = 1_000_000)
     {
         _options = new ColumnStoreOptions
@@ -18,13 +21,16 @@ public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
             RowGroupSizeThreshold = rowGroupSizeThreshold
         };
 
-        _delta = ActivatorUtilities.CreateInstance<DeltaStore<TRow>>(FallbackServiceProvider.Default);
+        _delta = FallbackServiceProvider.Default.GetRequiredService<IDeltaStoreFactory<TRow>>().Create(_options);
     }
 
-    internal ColumnStore(IOptions<ColumnStoreOptions> options, IDeltaStore<TRow> delta)
+    /// <summary>
+    /// Dependency constructor for service-like usage.
+    /// </summary>
+    internal ColumnStore(IOptions<ColumnStoreOptions> options, IDeltaStoreFactory<TRow> deltaStoreFactory)
     {
         _options = options.Value;
-        _delta = delta;
+        _delta = deltaStoreFactory.Create(options.Value);
     }
 
     public int Count { get; private set; }

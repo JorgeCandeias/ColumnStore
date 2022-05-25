@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
         return services
             .AddOptions()
             .AddSingleton(typeof(IDeltaRowGroupFactory<>), typeof(DeltaRowGroupFactory<>))
-            .AddTransient(typeof(IDeltaStore<>), typeof(DeltaStore<>))
+            .AddSingleton(typeof(IDeltaStoreFactory<>), typeof(DeltaStoreFactory<>))
             .AddSingleton(typeof(IColumnSegmentBuilderFactory<>), typeof(ColumnSegmentBuilderFactory<>))
             .AddTransient(typeof(ColumnSegmentBuilder<>));
     }
