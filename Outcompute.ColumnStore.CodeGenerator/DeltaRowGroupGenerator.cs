@@ -9,7 +9,6 @@ internal static class DeltaRowGroupGenerator
     {
         var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup.Name}";
         var baseTypeName = library.DeltaRowGroup.ToDisplayString().Replace("<TRow>", $"<{type.Symbol.ToDisplayString()}>");
-        var optionsTypeName = $"{library.IOptions.Name}<{library.ColumnStoreOptions.Name}>";
 
         var code = $@"
 
@@ -23,7 +22,7 @@ internal static class DeltaRowGroupGenerator
 
                     {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}
 
-                    public {generatedTypeName}(int id, {optionsTypeName} options, {library.Serializer1.ToDisplayString().Replace("<T>", $"<{type.Symbol.ToDisplayString()}>")} serializer, {library.SerializerSessionPool.ToDisplayString()} sessions) : base(id, options, serializer, sessions)
+                    public {generatedTypeName}(int id, {library.ColumnStoreOptions.Name} options, {library.Serializer1.ToDisplayString().Replace("<T>", $"<{type.Symbol.ToDisplayString()}>")} serializer, {library.SerializerSessionPool.ToDisplayString()} sessions) : base(id, options, serializer, sessions)
                     {{
                         {type.Properties.Render(p => @$"_{p.Name}Stats.Name = ""{p.Name}"";")}
                     }}

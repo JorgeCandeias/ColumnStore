@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-using Microsoft.IO;
+﻿using Microsoft.IO;
 using Orleans;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
@@ -18,14 +17,14 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     private readonly Serializer<TRow> _serializer;
     private readonly SerializerSessionPool _sessions;
 
-    protected DeltaRowGroup(int id, IOptions<ColumnStoreOptions> options, Serializer<TRow> serializer, SerializerSessionPool sessions)
+    protected DeltaRowGroup(int id, ColumnStoreOptions options, Serializer<TRow> serializer, SerializerSessionPool sessions)
     {
         Guard.IsGreaterThanOrEqualTo(id, 0, nameof(id));
         Guard.IsNotNull(options, nameof(options));
         Guard.IsNotNull(serializer, nameof(serializer));
 
         _id = id;
-        _options = options.Value;
+        _options = options;
         _serializer = serializer;
         _sessions = sessions;
     }
@@ -38,6 +37,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     [Id(2)]
     private RowGroupState _state = RowGroupState.Open;
 
+    // todo: expose this as a serializable property
     [Id(3)]
     private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
 

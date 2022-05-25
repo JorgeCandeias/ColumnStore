@@ -2,5 +2,5 @@
 
 internal interface IDeltaRowGroupFactory<TRow>
 {
-    IDeltaRowGroup<TRow> Create(int id);
+    IDeltaRowGroup<TRow> Create(int id, ColumnStoreOptions options);
 }

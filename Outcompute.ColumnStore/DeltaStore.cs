@@ -6,14 +6,17 @@ namespace Outcompute.ColumnStore;
 internal class DeltaStore<TRow> : IDeltaStore<TRow>
 {
     private readonly IDeltaRowGroupFactory<TRow> _deltaRowGroupFactory;
+    private readonly ColumnStoreOptions _options;
 
-    public DeltaStore(IDeltaRowGroupFactory<TRow> deltaRowGroupFactory)
+    public DeltaStore(ColumnStoreOptions options, IDeltaRowGroupFactory<TRow> deltaRowGroupFactory)
     {
+        Guard.IsNotNull(options, nameof(options));
         Guard.IsNotNull(deltaRowGroupFactory, nameof(deltaRowGroupFactory));
 
+        _options = options;
         _deltaRowGroupFactory = deltaRowGroupFactory;
 
-        _active = _deltaRowGroupFactory.Create(_ids++);
+        _active = _deltaRowGroupFactory.Create(_ids++, _options);
         _groups.Add(_active);
     }
 
@@ -31,7 +34,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         if (_active.State == RowGroupState.Closed)
         {
-            _active = _deltaRowGroupFactory.Create(_ids++);
+            _active = _deltaRowGroupFactory.Create(_ids++, _options);
             _groups.Add(_active);
         }
 
@@ -46,7 +49,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         if (_active.State == RowGroupState.Closed)
         {
-            _active = _deltaRowGroupFactory.Create(_ids++);
+            _active = _deltaRowGroupFactory.Create(_ids++, _options);
             _groups.Add(_active);
         }
 

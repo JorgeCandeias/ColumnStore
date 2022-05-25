@@ -175,24 +175,12 @@ public class DeltaRowGroupTests
     [Fact]
     public void Serializes()
     {
-        var rows = Create(123);
-        rows.AddRange(_data);
-
-        using var stream = new MemoryStream();
-
-        var serializerType = typeof(Serializer<>).MakeGenericType(_generatedType);
+        var generatedName = $"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}";
+        var generatedType = FindType(generatedName);
+        var serializerType = typeof(Serializer<>).MakeGenericType(generatedType);
         var serializer = _provider.GetRequiredService(serializerType);
 
-        /*
-        var serializer = _provider.GetRequiredService<Serializer>();
-        var serialize = typeof(Serializer)
-            .GetMethod(nameof(Serializer.Serialize), 1, new[] { Type.MakeGenericMethodParameter(0), typeof(Stream), typeof(int) })!
-            .MakeGenericMethod(_generatedType);
-
-        serialize.Invoke(serializer, new[] { rows, stream, Type.Missing });
-        */
-
-        //var serializer = _provider.GetRequiredService<Serializer<ColumnStoreCodeGen.TestModelDeltaRowGroup>>();
+        Assert.NotNull(serializer);
     }
 
     [GenerateSerializer, ColumnStore]

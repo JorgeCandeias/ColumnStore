@@ -20,16 +20,16 @@ internal class DeltaRowGroupFactory<TRow> : IDeltaRowGroupFactory<TRow>
         {
             if (assembly.GetType(generatedTypeName) is Type generatedType)
             {
-                _factory = ActivatorUtilities.CreateFactory(generatedType, new[] { typeof(int) });
+                _factory = ActivatorUtilities.CreateFactory(generatedType, new[] { typeof(int), typeof(ColumnStoreOptions) });
                 break;
             }
         }
 
         if (_factory is null)
         {
-            throw new InvalidOperationException($"Unabled to find generated type '{generatedTypeName}' for {nameof(ColumnStore)} user model '{modelType.ToTypeString()}'");
+            throw new InvalidOperationException($"Unabled to find generated type '{generatedTypeName}' for user model '{modelType.ToTypeString()}'");
         }
     }
 
-    public IDeltaRowGroup<TRow> Create(int id) => (IDeltaRowGroup<TRow>)_factory.Invoke(_provider, new object[] { id });
+    public IDeltaRowGroup<TRow> Create(int id, ColumnStoreOptions options) => (IDeltaRowGroup<TRow>)_factory.Invoke(_provider, new object[] { id, options });
 }
