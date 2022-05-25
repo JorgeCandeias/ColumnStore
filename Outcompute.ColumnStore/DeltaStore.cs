@@ -3,6 +3,7 @@
 namespace Outcompute.ColumnStore;
 
 // todo: configure serialization
+// todo: this needs a factory
 internal class DeltaStore<TRow> : IDeltaStore<TRow>
 {
     private readonly IDeltaRowGroupFactory<TRow> _deltaRowGroupFactory;

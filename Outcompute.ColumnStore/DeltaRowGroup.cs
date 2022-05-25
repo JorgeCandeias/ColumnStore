@@ -3,6 +3,7 @@ using Orleans;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
+using System.Buffers;
 using System.Collections;
 
 namespace Outcompute.ColumnStore;
@@ -29,6 +30,11 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         _sessions = sessions;
     }
 
+    /// <summary>
+    /// Version used to invalidate enumerators.
+    /// </summary>
+    private int _version;
+
     #region State
 
     [Id(1)]
@@ -37,9 +43,28 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     [Id(2)]
     private RowGroupState _state = RowGroupState.Open;
 
-    // todo: expose this as a serializable property
-    [Id(3)]
+    // todo: handle disposing on the entire object graph
     private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
+
+    [Id(3)]
+    private ReadOnlySequence<byte> DataBytes
+    {
+        get => _data.GetReadOnlySequence();
+        set
+        {
+            _data.SetLength(0);
+
+            var reader = new SequenceReader<byte>(value);
+
+            while (reader.Consumed < reader.Length)
+            {
+                var unread = reader.UnreadSpan;
+                var buffer = _data.GetSpan(unread.Length);
+                unread.CopyTo(buffer);
+                _data.Advance(unread.Length);
+            }
+        }
+    }
 
     [Id(4)]
     private RowGroupStats? _stats;
@@ -64,6 +89,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     private void Invalidate()
     {
         _stats = null;
+        _version++;
     }
 
     /// <summary>
@@ -167,6 +193,8 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 
     public IEnumerator<TRow> GetEnumerator()
     {
+        var version = _version;
+
         using var session = _sessions.GetSession();
         var sequence = _data.GetReadOnlySequence();
 
@@ -175,6 +203,11 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 
         while (position < length)
         {
+            if (version != _version)
+            {
+                ThrowHelper.ThrowInvalidOperationException($"This {GetType().Name} has changed since the enumeration started");
+            }
+
             // create a new reader per loop as ref structs cannot be used after yielding
             var reader = Reader.Create(sequence, session);
             reader.Skip(position);
