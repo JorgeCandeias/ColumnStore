@@ -15,6 +15,7 @@ public class DeltaRowGroupTests
     {
         _provider = new ServiceCollection()
             .AddSerializer()
+            .AddColumnStore()
             .BuildServiceProvider();
 
         _generatedType = FindType($"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}");
@@ -174,7 +175,7 @@ public class DeltaRowGroupTests
     }
 
     [Fact]
-    public void Serializes()
+    public void SerializesAsUntypedFromAssembly()
     {
         var generatedName = $"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}";
         var generatedType = FindType(generatedName);
@@ -182,6 +183,31 @@ public class DeltaRowGroupTests
         var serializer = _provider.GetRequiredService(serializerType);
 
         Assert.NotNull(serializer);
+
+        // todo
+    }
+
+    [Fact]
+    public void SerializesAsUntypedFromFactory()
+    {
+        var generatedInstance = _provider.GetRequiredService<IDeltaRowGroupFactory<TestModel>>().Create(1, new ColumnStoreOptions());
+        var generatedType = generatedInstance.GetType();
+        var serializerType = typeof(Serializer<>).MakeGenericType(generatedType);
+        var serializer = _provider.GetRequiredService(serializerType);
+
+        Assert.NotNull(serializer);
+
+        // todo
+    }
+
+    [Fact]
+    public void SerializesAsTyped()
+    {
+        var serializer = _provider.GetRequiredService<Serializer<IDeltaRowGroupFactory<TestModel>>>();
+
+        Assert.NotNull(serializer);
+
+        // todo
     }
 
     [GenerateSerializer, ColumnStore]
