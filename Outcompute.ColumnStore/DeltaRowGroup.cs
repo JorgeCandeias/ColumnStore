@@ -3,7 +3,6 @@ using Orleans;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
-using System.Buffers;
 using System.Collections;
 
 namespace Outcompute.ColumnStore;
@@ -46,23 +45,15 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     // todo: handle disposing on the entire object graph
     private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
 
+    // todo: this is highly inneficient, look into adding a codec for ReadOnlySequence or even RecyclableMemoryStream itself
     [Id(3)]
-    private ReadOnlySequence<byte> DataBytes
+    protected byte[] DataBytes
     {
-        get => _data.GetReadOnlySequence();
+        get => _data.ToArray();
         set
         {
             _data.SetLength(0);
-
-            var reader = new SequenceReader<byte>(value);
-
-            while (reader.Consumed < reader.Length)
-            {
-                var unread = reader.UnreadSpan;
-                var buffer = _data.GetSpan(unread.Length);
-                unread.CopyTo(buffer);
-                _data.Advance(unread.Length);
-            }
+            _data.Write(value);
         }
     }
 

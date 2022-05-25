@@ -203,7 +203,17 @@ public class DeltaRowGroupTests
     [Fact]
     public void SerializesAsTyped()
     {
-        var serializer = _provider.GetRequiredService<Serializer<IDeltaRowGroupFactory<TestModel>>>();
+        var serializer = _provider.GetRequiredService<Serializer<ColumnStoreCodeGen.TestModelDeltaRowGroup>>();
+
+        Assert.NotNull(serializer);
+
+        // todo
+    }
+
+    [Fact]
+    public void SerializesNonGeneratedAsTyped()
+    {
+        var serializer = _provider.GetRequiredService<Serializer<NonGeneratedTestModelDeltaRowGroup>>();
 
         Assert.NotNull(serializer);
 
@@ -218,4 +228,19 @@ public class DeltaRowGroupTests
         [property: Id(4), ColumnStoreProperty] double? Prop4,
         [property: Id(5), ColumnStoreProperty] string? Prop5,
         bool Ignored);
+
+    internal class NonGeneratedTestModelDeltaRowGroup : DeltaRowGroup<TestModel>
+    {
+        public NonGeneratedTestModelDeltaRowGroup(int id, ColumnStoreOptions options, Serializer<TestModel> serializer, Orleans.Serialization.Session.SerializerSessionPool sessions) : base(id, options, serializer, sessions)
+        {
+        }
+
+        protected override void OnAdded(TestModel row)
+        {
+        }
+
+        protected override void OnBuildStats(RowGroupStats.Builder builder)
+        {
+        }
+    }
 }
