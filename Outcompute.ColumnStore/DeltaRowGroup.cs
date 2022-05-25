@@ -45,15 +45,17 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     // todo: handle disposing on the entire object graph
     private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
 
-    // todo: this is highly inneficient, look into adding a codec for ReadOnlySequence or even RecyclableMemoryStream itself
+    // todo: this is probably inneficient due to buffer copies, look into adding a codec for ReadOnlySequence or even RecyclableMemoryStream itself
+    // todo: the generated field accessor is treating private and protected properties as fields, look into this
+    // todo: alternatively use a surrogate to isolate serialization from state
     [Id(3)]
-    protected byte[] DataBytes
+    public ReadOnlyMemory<byte> DataBytes
     {
-        get => _data.ToArray();
+        get => _data.GetBuffer().AsMemory().Slice(0, (int)_data.Length);
         set
         {
             _data.SetLength(0);
-            _data.Write(value);
+            _data.Write(value.Span);
         }
     }
 
