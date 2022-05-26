@@ -2,7 +2,7 @@
   "profiles": {
     "Profile 1": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\Outcompute.TestApp\\Outcompute.TestApp.csproj"
+      "targetProject": "..\\Outcompute.ColumnStore.Tests\\Outcompute.ColumnStore.Tests.csproj"
     }
   }
 }
