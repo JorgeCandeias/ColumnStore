@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
+using System.Reflection;
 
 namespace Outcompute.ColumnStore.CodeGenerator;
 
@@ -18,19 +19,17 @@ internal static class OrleansSerializationSourceDriver
             compilation = compilation.AddSyntaxTrees(tree);
         }
 
-        Type type = null!;
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            type = assembly.GetType("Orleans.CodeGenerator.OrleansSerializationSourceGenerator", false);
-        }
+        // hack to access the orleans source generator since the nuget package hides it from dev
+        var assembly = Assembly.Load("Orleans.CodeGenerator");
+        var type = assembly.GetType("Orleans.CodeGenerator.OrleansSerializationSourceGenerator", false);
+        var generator = (ISourceGenerator)Activator.CreateInstance(type);
 
         if (type is null)
         {
             throw new DllNotFoundException();
         }
 
-        /*
-        var driver = CSharpGeneratorDriver.Create(new Orleans.CodeGenerator.OrleansSerializationSourceGenerator());
+        var driver = CSharpGeneratorDriver.Create(generator);
         driver = (CSharpGeneratorDriver)driver.RunGenerators(compilation);
         var result = driver.GetRunResult();
 
@@ -41,6 +40,5 @@ internal static class OrleansSerializationSourceDriver
                 //context.AddSource(source.HintName, source.SourceText);
             }
         }
-        */
     }
 }
