@@ -18,6 +18,10 @@ internal static class DeltaRowGroupGenerator
                 [GenerateSerializer]
                 internal class {generatedTypeName}: {baseTypeName}
                 {{
+                    private {generatedTypeName}()
+                    {{
+                    }}
+
                     {type.Properties.Render(p => $"private readonly {library.HashSet.Name}<{p.Type.ToDisplayString()}> _{p.Name}Set = new();")}
 
                     {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}

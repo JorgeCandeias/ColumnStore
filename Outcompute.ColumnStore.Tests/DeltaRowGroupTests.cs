@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 using Orleans.Serialization;
+using Outcompute.ColumnStore.Tests.ColumnStoreCodeGen;
 
 namespace Outcompute.ColumnStore.Tests;
 
@@ -21,8 +22,12 @@ public class DeltaRowGroupTests
         _generatedType = FindType($"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}");
     }
 
-    private IDeltaRowGroup<TestModel> Create(int id, ColumnStoreOptions options) =>
-        (IDeltaRowGroup<TestModel>)ActivatorUtilities.CreateInstance(_provider, _generatedType, id, options);
+    private TestModelDeltaRowGroup Create(int id, ColumnStoreOptions options, params TestModel[] data)
+    {
+        var group = ActivatorUtilities.CreateInstance<TestModelDeltaRowGroup>(_provider, id, options);
+        group.AddRange(data);
+        return group;
+    }
 
     private readonly TestModel[] _data = new[]
     {
@@ -175,16 +180,21 @@ public class DeltaRowGroupTests
     }
 
     [Fact]
-    public void SerializesAsUntypedFromAssembly()
+    public void Serializes()
     {
-        var generatedName = $"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}";
-        var generatedType = FindType(generatedName);
-        var serializerType = typeof(Serializer<>).MakeGenericType(generatedType);
-        var serializer = _provider.GetRequiredService(serializerType);
+        // arrange
+        var serializer = _provider.GetRequiredService<Serializer<TestModelDeltaRowGroup>>();
+        var group = Create(123, new ColumnStoreOptions(), _data);
+
+        // act - serialize
+        using var stream = new MemoryStream();
+        serializer.Serialize(group, stream, 0);
+
+        // act - deserialize
+        stream.Position = 0;
+        var result = serializer.Deserialize(stream);
 
         Assert.NotNull(serializer);
-
-        // todo
     }
 
     [Fact]
@@ -210,16 +220,6 @@ public class DeltaRowGroupTests
         // todo
     }
 
-    [Fact]
-    public void SerializesNonGeneratedAsTyped()
-    {
-        var serializer = _provider.GetRequiredService<Serializer<NonGeneratedTestModelDeltaRowGroup>>();
-
-        Assert.NotNull(serializer);
-
-        // todo
-    }
-
     [GenerateSerializer, ColumnStore]
     public record struct TestModel(
         [property: Id(1), ColumnStoreProperty] int Prop1,
@@ -228,19 +228,4 @@ public class DeltaRowGroupTests
         [property: Id(4), ColumnStoreProperty] double? Prop4,
         [property: Id(5), ColumnStoreProperty] string? Prop5,
         bool Ignored);
-
-    internal class NonGeneratedTestModelDeltaRowGroup : DeltaRowGroup<TestModel>
-    {
-        public NonGeneratedTestModelDeltaRowGroup(int id, ColumnStoreOptions options, Serializer<TestModel> serializer, Orleans.Serialization.Session.SerializerSessionPool sessions) : base(id, options, serializer, sessions)
-        {
-        }
-
-        protected override void OnAdded(TestModel row)
-        {
-        }
-
-        protected override void OnBuildStats(RowGroupStats.Builder builder)
-        {
-        }
-    }
 }

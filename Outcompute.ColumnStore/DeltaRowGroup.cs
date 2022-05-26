@@ -17,6 +17,10 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     private readonly Serializer<TRow> _serializer;
     private readonly SerializerSessionPool _sessions;
 
+    protected DeltaRowGroup()
+    { 
+    }
+
     protected DeltaRowGroup(int id, ColumnStoreOptions options, Serializer<TRow> serializer, SerializerSessionPool sessions)
     {
         Guard.IsGreaterThanOrEqualTo(id, 0, nameof(id));
