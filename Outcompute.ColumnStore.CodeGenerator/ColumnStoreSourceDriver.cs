@@ -4,7 +4,7 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Outcompute.ColumnStore.CodeGenerator;
 
-internal static class CodeGenerator
+internal static class ColumnStoreSourceDriver
 {
     public static CompilationUnitSyntax Generate(Compilation compilation, SourceModel model, LibraryTypes library)
     {

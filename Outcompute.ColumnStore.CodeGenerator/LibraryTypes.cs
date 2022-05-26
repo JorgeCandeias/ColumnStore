@@ -62,5 +62,5 @@ internal class LibraryTypes
     public INamedTypeSymbol HashSet { get; private set; } = null!;
     public INamedTypeSymbol IOptions { get; private set; } = null!;
     public INamedTypeSymbol SerializerSessionPool { get; private set; } = null!;
-    public INamedTypeSymbol Serializer1 { get; private set; } = null;
+    public INamedTypeSymbol Serializer1 { get; private set; } = null!;
 }

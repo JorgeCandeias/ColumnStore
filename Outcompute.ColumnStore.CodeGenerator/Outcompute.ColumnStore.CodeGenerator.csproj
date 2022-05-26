@@ -6,6 +6,9 @@
 		<LangVersion>Latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<DevelopmentDependency>true</DevelopmentDependency>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -14,10 +17,24 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0" />
+		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="4.0.0-preview1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>all</IncludeAssets>
+			<ExcludeAssets>none</ExcludeAssets>
+			<GeneratePathProperty>true</GeneratePathProperty>
+		</PackageReference>
 		<PackageReference Include="SonarAnalyzer.CSharp" Version="8.39.0.47922">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(PkgMicrosoft_Orleans_CodeGenerator)\analyzers\dotnet\cs\Orleans.CodeGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 
 </Project>
