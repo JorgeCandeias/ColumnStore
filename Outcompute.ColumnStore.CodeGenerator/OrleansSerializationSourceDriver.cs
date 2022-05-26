@@ -7,37 +7,35 @@ namespace Outcompute.ColumnStore.CodeGenerator;
 
 internal static class OrleansSerializationSourceDriver
 {
-    public static void Generate(Compilation compilation, IEnumerable<SourceText> sources)
+    public static IEnumerable<GeneratedSourceResult> Generate(Compilation compilation, IEnumerable<SourceText> sources)
     {
         // remove all original syntax trees so we dont generate duplicate code on the user project
         compilation = compilation.RemoveAllSyntaxTrees();
 
-        // add all specified sources as syntax treets
+        // add all specified sources to the skeleton compilation
         foreach (var source in sources)
         {
             var tree = CSharpSyntaxTree.ParseText(source);
             compilation = compilation.AddSyntaxTrees(tree);
         }
 
-        // hack to access the orleans source generator since the nuget package hides it from dev
+        // hack to access the orleans source generator since the nuget package is a dev dependency
         var assembly = Assembly.Load("Orleans.CodeGenerator");
-        var type = assembly.GetType("Orleans.CodeGenerator.OrleansSerializationSourceGenerator", false);
+        var type = assembly.GetType("Orleans.CodeGenerator.OrleansSerializationSourceGenerator", true);
         var generator = (ISourceGenerator)Activator.CreateInstance(type);
 
-        if (type is null)
-        {
-            throw new DllNotFoundException();
-        }
+        // run the orleans serialization source generator on the target code
+        var result = CSharpGeneratorDriver
+            .Create(generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
 
-        var driver = CSharpGeneratorDriver.Create(generator);
-        driver = (CSharpGeneratorDriver)driver.RunGenerators(compilation);
-        var result = driver.GetRunResult();
-
+        // yield the generated source code
         foreach (var item in result.Results)
         {
             foreach (var source in item.GeneratedSources)
             {
-                //context.AddSource(source.HintName, source.SourceText);
+                yield return source;
             }
         }
     }
