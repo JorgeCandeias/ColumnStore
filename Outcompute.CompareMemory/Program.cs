@@ -1,10 +1,18 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using Microsoft.Extensions.DependencyInjection;
 using Outcompute.ColumnStore;
+
+var provider = new ServiceCollection()
+    .AddColumnStore()
+    .BuildServiceProvider();
+
+var factory = provider
+    .GetRequiredService<IColumnStoreFactory<TestModel>>();
 
 var count = 100_000_000;
 
 TestList(count);
-TestColumnStore(count);
+TestColumnStore(factory, count);
 
 static void TestList(int count)
 {
@@ -21,14 +29,13 @@ static void TestList(int count)
 
     Console.WriteLine($"List using {diff} bytes");
 
-    // keep the list collection referenced
-    list.ToString();
+    GC.KeepAlive(list);
 }
 
-static void TestColumnStore(int count)
+static void TestColumnStore(IColumnStoreFactory<TestModel> factory, int count)
 {
     var before = GC.GetTotalMemory(true);
-    var cs = new ColumnStore<TestModel>();
+    var cs = factory.Create();
 
     foreach (var item in Generate(count))
     {
@@ -40,8 +47,7 @@ static void TestColumnStore(int count)
 
     Console.WriteLine($"ColumnStore using {diff} bytes");
 
-    // keep the collection referenced
-    cs.ToString();
+    GC.KeepAlive(cs);
 }
 
 static IEnumerable<TestModel> Generate(int count)
