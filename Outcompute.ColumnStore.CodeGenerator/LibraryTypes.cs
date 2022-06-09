@@ -4,8 +4,12 @@ namespace Outcompute.ColumnStore.CodeGenerator;
 
 internal class LibraryTypes
 {
-    private LibraryTypes()
+    private readonly Compilation _compilation;
+    private readonly Dictionary<string, INamedTypeSymbol> _symbols = new();
+
+    public LibraryTypes(Compilation compilation)
     {
+        _compilation = compilation;
     }
 
     public static LibraryTypes FromCompilation(Compilation compilation)
@@ -33,15 +37,22 @@ internal class LibraryTypes
             Serializer1 = Type("Orleans.Serialization.Serializer`1")
         };
 
-        INamedTypeSymbol Type(string fullyQualifiedMetadataName)
+        
+    }
+
+    private INamedTypeSymbol Type(string fullyQualifiedMetadataName)
+    {
+        if (_symbols.TryGetValue(fullyQualifiedMetadataName, out var symbol))
         {
             if (compilation.GetTypeByMetadataName(fullyQualifiedMetadataName) is not INamedTypeSymbol symbol)
             {
                 throw new InvalidOperationException($"Cannot find type with metadata name '{fullyQualifiedMetadataName}'");
             }
-
-            return symbol;
         }
+
+        
+
+        return symbol;
     }
 
     public Compilation Compilation { get; private set; } = null!;

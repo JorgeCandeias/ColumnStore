@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection;
 
 namespace Outcompute.ColumnStore.CodeGenerator;
 
@@ -14,8 +15,9 @@ internal static class DeltaRowGroupGenerator
 
             namespace {type.GeneratedNamespace}
             {{
-                [GeneratedCode(""{nameof(DeltaRowGroupGenerator)}"", null)]
+                [GeneratedCode(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [GenerateSerializer]
+                [UseActivator]
                 internal class {generatedTypeName}: {baseTypeName}
                 {{
                     private {generatedTypeName}()
@@ -49,6 +51,19 @@ internal static class DeltaRowGroupGenerator
                     protected override void OnBuildStats(RowGroupStats.Builder builder)
                     {{
                         {type.Properties.Render(p => $@"builder.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
+                    }}
+                }}
+
+                [RegisterActivator]
+                internal class {generatedTypeName}Activator: IActivator<{generatedTypeName}>
+                {{
+                    private readonly 
+                    public {generatedTypeName}Activator()
+                    {{                        
+                    }}
+
+                    public {generatedTypeName} Create()
+                    {{  
                     }}
                 }}
             }}
