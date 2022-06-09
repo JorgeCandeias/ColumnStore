@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
 
         return services
             .AddOptions()
+            .AddSingleton(typeof(IColumnStoreFactory<>), typeof(ColumnStoreFactory<>))
             .AddSingleton(typeof(IDeltaRowGroupFactory<>), typeof(DeltaRowGroupFactory<>))
             .AddSingleton(typeof(IDeltaStoreFactory<>), typeof(DeltaStoreFactory<>))
             .AddSingleton(typeof(IColumnSegmentBuilderFactory<>), typeof(ColumnSegmentBuilderFactory<>))

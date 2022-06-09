@@ -9,8 +9,15 @@ var logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
+var provider = new ServiceCollection()
+    .AddColumnStore()
+    .AddSerializer()
+    .BuildServiceProvider();
+
+var factory = provider.GetRequiredService<IColumnStoreFactory<Book>>();
+
 // detailed collection statistics
-var cs = new ColumnStore<Book>(5);
+var cs = factory.Create(new ColumnStoreOptions { RowGroupSizeThreshold = 5 });
 
 cs.Add(new Book { Year = 1, Title = "A" });
 PrintStats();
@@ -43,10 +50,6 @@ cs.Add(new Book { Year = 3, Title = "C" });
 PrintStats();
 
 // serializer payload comparison
-var provider = new ServiceCollection()
-    .AddSerializer()
-    .BuildServiceProvider();
-
 var serializer = provider.GetRequiredService<Serializer>();
 
 MeasureMemory<object?>(() => null);
@@ -63,22 +66,6 @@ MeasureMemory(() => new Range2LN(1, null));
 MeasureMemory(() => new Range2LN(1, 1000));
 
 MeasureMemory(() => new[] { new Range1(1), new Range1(1000) });
-
-/*
-var list = new List<Book>();
-
-var listExp = Expression.Constant(list);
-
-Expression<Func<Book, int>> yearLambda = (Book x) => x.Year;
-
-var qqq = (Book x) => x.Year;
-
-foreach (var prop in new[] { "Year", "Title" })
-{
-    var order1 = Expression.Call(listExp, typeof(Enumerable).GetMethod(nameof(Enumerable.OrderBy))!, );
-}
-
-*/
 
 void MeasureMemory<T>(Func<T> create)
 {

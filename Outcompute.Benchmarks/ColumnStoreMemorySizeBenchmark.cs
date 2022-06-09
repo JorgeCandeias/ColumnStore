@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
+using Microsoft.Extensions.DependencyInjection;
 using Outcompute.ColumnStore;
 
 namespace Outcompute.Benchmarks;
@@ -6,8 +7,15 @@ namespace Outcompute.Benchmarks;
 [MemoryDiagnoser, ShortRunJob]
 public class ColumnStoreMemorySizeBenchmark
 {
+    private readonly IColumnStoreFactory<TestModel> _factory;
+
     public ColumnStoreMemorySizeBenchmark()
     {
+        var provider = new ServiceCollection()
+            .AddColumnStore()
+            .BuildServiceProvider();
+
+        _factory = provider.GetRequiredService<IColumnStoreFactory<TestModel>>();
     }
 
     private TestModel[] _data = null!;
@@ -44,7 +52,7 @@ public class ColumnStoreMemorySizeBenchmark
     [Benchmark]
     public void ColumnStore()
     {
-        var cs = new ColumnStore<TestModel>();
+        var cs = _factory.Create();
 
         for (var i = 0; i < _data.Length; i++)
         {

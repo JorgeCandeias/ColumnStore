@@ -1,28 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using System.Collections;
 
 namespace Outcompute.ColumnStore;
 
 // todo: configure serialization
-public class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
+internal class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 {
     private readonly RowGroupConverter<TRow> _converter = new();
     private readonly IDeltaStore<TRow> _delta;
     private readonly ColumnStoreOptions _options;
-
-    /// <summary>
-    /// Simple constructor for collection-like usage.
-    /// </summary>
-    public ColumnStore(int rowGroupSizeThreshold = 1_000_000)
-    {
-        _options = new ColumnStoreOptions
-        {
-            RowGroupSizeThreshold = rowGroupSizeThreshold
-        };
-
-        _delta = FallbackServiceProvider.Default.GetRequiredService<IDeltaStoreFactory<TRow>>().Create(_options);
-    }
 
     /// <summary>
     /// Dependency constructor for service-like usage.

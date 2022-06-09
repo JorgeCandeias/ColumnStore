@@ -24,8 +24,12 @@ public class DeltaRowGroupTests
 
     private TestModelDeltaRowGroup Create(int id, ColumnStoreOptions options, params TestModel[] data)
     {
-        var group = ActivatorUtilities.CreateInstance<TestModelDeltaRowGroup>(_provider, id, options);
+        var group = (TestModelDeltaRowGroup)_provider
+            .GetRequiredService<IDeltaRowGroupFactory<TestModel>>()
+            .Create(id, options);
+
         group.AddRange(data);
+
         return group;
     }
 
@@ -64,7 +68,7 @@ public class DeltaRowGroupTests
         // assert empty state
         Assert.Equal(id, rows.Id);
         Assert.Equal(RowGroupState.Open, rows.State);
-        Assert.Equal(0, rows.Count);
+        Assert.Empty(rows);
 
         // assert empty stats
         Assert.Equal(id, rows.Stats.Id);
