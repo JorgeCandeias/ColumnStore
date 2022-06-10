@@ -205,6 +205,7 @@ public class DeltaRowGroupTests
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.DataBytes.Length, output.DataBytes.Length);
         Assert.Equal(input.Count, output.Count);
+        Assert.True(input.SequenceEqual(output));
     }
 
     [Fact]
@@ -230,6 +231,7 @@ public class DeltaRowGroupTests
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.DataBytes.Length, output.DataBytes.Length);
         Assert.Equal(input.Count, output.Count);
+        Assert.True(input.SequenceEqual(output));
     }
 
     [Id(1001)]
