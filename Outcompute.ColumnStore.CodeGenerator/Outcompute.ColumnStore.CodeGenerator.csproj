@@ -23,7 +23,7 @@
 			<ExcludeAssets>none</ExcludeAssets>
 			<GeneratePathProperty>true</GeneratePathProperty>
 		</PackageReference>
-		<PackageReference Include="SonarAnalyzer.CSharp" Version="8.39.0.47922">
+		<PackageReference Include="SonarAnalyzer.CSharp" Version="8.40.0.48530">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
