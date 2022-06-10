@@ -3,6 +3,7 @@ using Orleans;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
+using System.Buffers;
 using System.Collections;
 
 namespace Outcompute.ColumnStore;
@@ -22,6 +23,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         Guard.IsGreaterThanOrEqualTo(id, 0, nameof(id));
         Guard.IsGreaterThanOrEqualTo(capacity, 0, nameof(capacity));
         Guard.IsNotNull(serializer, nameof(serializer));
+        Guard.IsNotNull(sessions, nameof(sessions));
 
         Id = id;
         Capacity = capacity;
@@ -46,33 +48,21 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     public RowGroupState State { get; private set; } = RowGroupState.Open;
 
     // todo: handle disposing on the entire object graph
-    private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
-
-    // todo: this is probably inneficient due to buffer copies, look into adding a codec for ReadOnlySequence or even RecyclableMemoryStream itself
-    // todo: the generated field accessor is treating private and protected properties as fields, look into this
-    // todo: alternatively use a surrogate to isolate serialization from state
     [Id(4)]
-    public ReadOnlyMemory<byte> DataBytes
-    {
-        get
-        {
-            return _data.GetBuffer().AsMemory()[..(int)_data.Length];
-        }
-
-        set
-        {
-            _data.SetLength(0);
-            _data.Write(value.Span);
-        }
-    }
+    private readonly RecyclableMemoryStream _data = ColumnStoreMemoryStreamManager.GetStream();
 
     [Id(5)]
     private RowGroupStats? _stats;
 
-    public IRowGroupStats Stats => _stats ??= BuildStats();
-
     [Id(6)]
     public int Count { get; private set; }
+
+    public IRowGroupStats Stats => _stats ??= BuildStats();
+
+    /// <summary>
+    /// Gets the underlying serialized data.
+    /// </summary>
+    public ReadOnlySequence<byte> GetReadOnlySequence() => _data.GetReadOnlySequence();
 
     #endregion State
 

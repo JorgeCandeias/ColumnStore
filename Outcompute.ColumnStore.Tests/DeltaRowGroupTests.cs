@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 using Orleans.Serialization;
 using Outcompute.ColumnStore.Tests.ColumnStoreCodeGen;
+using System.Buffers;
 
 namespace Outcompute.ColumnStore.Tests;
 
@@ -203,9 +204,8 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Id, output.Id);
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
-        Assert.Equal(input.DataBytes.Length, output.DataBytes.Length);
         Assert.Equal(input.Count, output.Count);
-        Assert.True(input.SequenceEqual(output));
+        Assert.True(input.GetReadOnlySequence().ToArray().SequenceEqual(output.GetReadOnlySequence().ToArray()));
     }
 
     [Fact]
@@ -229,9 +229,8 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Id, output.Id);
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
-        Assert.Equal(input.DataBytes.Length, output.DataBytes.Length);
         Assert.Equal(input.Count, output.Count);
-        Assert.True(input.SequenceEqual(output));
+        Assert.True(input.GetReadOnlySequence().ToArray().SequenceEqual(output.GetReadOnlySequence().ToArray()));
     }
 
     [Id(1001)]
