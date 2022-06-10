@@ -1,12 +1,14 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
 using System.Reflection;
+using System.Text;
 
 namespace Outcompute.ColumnStore.CodeGenerator;
 
 internal static class DeltaRowGroupGenerator
 {
-    public static MemberDeclarationSyntax Generate(ColumnStoreTypeDescription type, LibraryTypes library)
+    public static SourceText Generate(ColumnStoreTypeDescription type, LibraryTypes library)
     {
         var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup1.Name}";
 
@@ -94,6 +96,6 @@ internal static class DeltaRowGroupGenerator
             }}
         ";
 
-        return SyntaxFactory.ParseCompilationUnit(code).ChildNodes().Cast<MemberDeclarationSyntax>().First();
+        return SourceText.From(CSharpSyntaxTree.ParseText(code).GetCompilationUnitRoot().NormalizeWhitespace().ToFullString(), Encoding.UTF8);
     }
 }

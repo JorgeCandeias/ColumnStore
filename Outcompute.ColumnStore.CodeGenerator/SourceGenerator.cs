@@ -20,9 +20,33 @@ namespace Outcompute.ColumnStore.CodeGenerator
             }
 
             var assemblyName = context.Compilation.AssemblyName ?? "Assembly";
-            var libs = new LibraryTypes(context.Compilation);
+            var library = new LibraryTypes(context.Compilation);
 
-            var result = ColumnStoreSourceDriver.Generate(context.Compilation, receiver.Model, libs);
+            // generate sources for each model
+            var sources = new List<SourceText>();
+            foreach (var item in receiver.Model.ColumnStoreTypes)
+            {
+                // create a flat model description to make code generation easier
+                var descriptor = new ColumnStoreTypeDescription
+                {
+                    GeneratedNamespace = $"{item.ContainingNamespace.ToDisplayString()}.ColumnStoreCodeGen",
+                    Symbol = item,
+                };
+
+                foreach (var property in item.GetMembers().OfType<IPropertySymbol>().Where(x => x.GetAttributes().Any(x => x.AttributeClass?.Equals(library.ColumnStorePropertyAttribute, SymbolEqualityComparer.Default) ?? false)))
+                {
+                    descriptor.Properties.Add(property);
+                }
+
+                // generate delta row code
+                var s = DeltaRowGroupGenerator.Generate(descriptor, library);
+                sources.Add(s);
+                context.AddSource($"{context.Compilation.AssemblyName}.{nameof(ColumnStore)}.{nameof(DeltaRowGroupGenerator)}.g.cs", s);
+            }
+
+            // toremove
+
+            var result = ColumnStoreSourceDriver.Generate(context.Compilation, receiver.Model, library);
             var text = result.NormalizeWhitespace().ToFullString();
 
             context.AddSource($"{assemblyName}.ColumnStore.g.cs", text);
@@ -32,7 +56,7 @@ namespace Outcompute.ColumnStore.CodeGenerator
             var replace = $"Metadata_ColumnStoreCodeGen_{context.Compilation.AssemblyName!.Replace('.', '_')}";
             var changes = new List<TextChange>();
 
-            foreach (var item in OrleansSerializationSourceDriver.Generate(context.Compilation, new[] { SourceText.From(text) }))
+            foreach (var item in OrleansSerializationSourceDriver.Generate(context.Compilation, sources.Append(SourceText.From(text)).ToArray()))
             {
                 var source = item.SourceText;
                 foreach (var line in source.Lines)
