@@ -189,7 +189,20 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.Count, output.Count);
-        Assert.Equal(input.Stats, output.Stats);
+
+        Assert.Equal(input.Stats.Id, output.Stats.Id);
+        Assert.Equal(input.Stats.RowCount, output.Stats.RowCount);
+        Assert.Equal(input.Stats.ColumnSegmentStats.Count, output.Stats.ColumnSegmentStats.Count);
+
+        foreach (var item in input.Stats.ColumnSegmentStats)
+        {
+            var other = output.Stats.ColumnSegmentStats[item.Key];
+
+            Assert.Equal(item.Value.Name, other.Name);
+            Assert.Equal(item.Value.DistinctValueCount, other.DistinctValueCount);
+            Assert.Equal(item.Value.DefaultValueCount, other.DefaultValueCount);
+        }
+
         Assert.True(input.GetReadOnlySequence().ToArray().SequenceEqual(output.GetReadOnlySequence().ToArray()));
     }
 
@@ -215,6 +228,20 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.Count, output.Count);
+
+        Assert.Equal(input.Stats.Id, output.Stats.Id);
+        Assert.Equal(input.Stats.RowCount, output.Stats.RowCount);
+        Assert.Equal(input.Stats.ColumnSegmentStats.Count, output.Stats.ColumnSegmentStats.Count);
+
+        foreach (var item in input.Stats.ColumnSegmentStats)
+        {
+            var other = output.Stats.ColumnSegmentStats[item.Key];
+
+            Assert.Equal(item.Value.Name, other.Name);
+            Assert.Equal(item.Value.DistinctValueCount, other.DistinctValueCount);
+            Assert.Equal(item.Value.DefaultValueCount, other.DefaultValueCount);
+        }
+
         Assert.True(input.GetReadOnlySequence().ToArray().SequenceEqual(output.GetReadOnlySequence().ToArray()));
     }
 

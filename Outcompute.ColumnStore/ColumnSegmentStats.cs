@@ -7,7 +7,7 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-public record struct ColumnSegmentStats(
+public record ColumnSegmentStats(
     [property: Id(1)] string Name,
     [property: Id(2)] int DistinctValueCount,
     [property: Id(3)] int DefaultValueCount)
@@ -26,40 +26,41 @@ public record struct ColumnSegmentStats(
         public int DefaultValueCount { get; set; }
 
         public ColumnSegmentStats ToImmutable() => new(Name, DistinctValueCount, DefaultValueCount);
-
-        public Builder Clone() => new()
-        {
-            Name = Name,
-            DistinctValueCount = DistinctValueCount,
-            DefaultValueCount = DefaultValueCount
-        };
     }
-
-    public Builder ToBuilder() => new()
-    {
-        Name = Name,
-        DistinctValueCount = DistinctValueCount,
-        DefaultValueCount = DefaultValueCount
-    };
 
     public static Builder CreateBuilder() => new();
 }
 
+[GenerateSerializer]
+internal record struct ColumnSegmentStatsSurrogate(
+    [property: Id(1)] string Name,
+    [property: Id(2)] int DistinctValueCount,
+    [property: Id(3)] int DefaultValueCount);
+
 [RegisterSerializer]
-internal sealed class ColumnSegmentStatsBuilderCodec : GeneralizedReferenceTypeSurrogateCodec<ColumnSegmentStats.Builder, ColumnSegmentStats>
+internal sealed class ColumnSegmentStatsBuilderCodec : GeneralizedReferenceTypeSurrogateCodec<ColumnSegmentStats.Builder, ColumnSegmentStatsSurrogate>
 {
-    public ColumnSegmentStatsBuilderCodec(IValueSerializer<ColumnSegmentStats> surrogateSerializer) : base(surrogateSerializer)
+    public ColumnSegmentStatsBuilderCodec(IValueSerializer<ColumnSegmentStatsSurrogate> surrogateSerializer) : base(surrogateSerializer)
     {
     }
 
-    public override ColumnSegmentStats.Builder ConvertFromSurrogate(ref ColumnSegmentStats surrogate)
+    public override ColumnSegmentStats.Builder ConvertFromSurrogate(ref ColumnSegmentStatsSurrogate surrogate)
     {
-        return surrogate.ToBuilder();
+        var builder = ColumnSegmentStats.CreateBuilder();
+
+        builder.Name = surrogate.Name;
+        builder.DistinctValueCount = surrogate.DistinctValueCount;
+        builder.DefaultValueCount = surrogate.DefaultValueCount;
+
+        return builder;
     }
 
-    public override void ConvertToSurrogate(ColumnSegmentStats.Builder value, ref ColumnSegmentStats surrogate)
+    public override void ConvertToSurrogate(ColumnSegmentStats.Builder value, ref ColumnSegmentStatsSurrogate surrogate)
     {
-        surrogate = value.ToImmutable();
+        surrogate = new ColumnSegmentStatsSurrogate(
+            value.Name,
+            value.DistinctValueCount,
+            value.DefaultValueCount);
     }
 }
 
@@ -68,6 +69,12 @@ internal sealed class ColumnSegmentStatsBuilderCopier : IDeepCopier<ColumnSegmen
 {
     public ColumnSegmentStats.Builder DeepCopy(ColumnSegmentStats.Builder input, CopyContext context)
     {
-        return input.Clone();
+        var builder = ColumnSegmentStats.CreateBuilder();
+
+        builder.Name = input.Name;
+        builder.DistinctValueCount = input.DistinctValueCount;
+        builder.DefaultValueCount = input.DefaultValueCount;
+
+        return builder;
     }
 }
