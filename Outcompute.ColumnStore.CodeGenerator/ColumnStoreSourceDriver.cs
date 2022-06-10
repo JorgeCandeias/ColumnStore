@@ -17,7 +17,7 @@ internal static class ColumnStoreSourceDriver
         foreach (var item in model.ColumnStoreTypes)
         {
             // create a flat model description to make code generation easier
-            var descriptor = new ColumnStoreTypeDescription
+            var descriptor = new Model
             {
                 GeneratedNamespace = $"{item.ContainingNamespace.ToDisplayString()}.ColumnStoreCodeGen",
                 Symbol = item,

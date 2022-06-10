@@ -6,5 +6,5 @@ public interface IRowGroupStats
 
     public int RowCount { get; }
 
-    public IReadOnlyDictionary<string, ColumnSegmentStats> ColumnSegmentStats { get; }
+    public IReadOnlyDictionary<string, IColumnSegmentStats> ColumnSegmentStats { get; }
 }

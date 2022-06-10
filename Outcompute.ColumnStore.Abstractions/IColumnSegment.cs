@@ -5,5 +5,5 @@
 /// </summary>
 public interface IColumnSegment<out TValue> : IEnumerable<TValue>
 {
-    ColumnSegmentStats GetStats();
+    IColumnSegmentStats GetStats();
 }

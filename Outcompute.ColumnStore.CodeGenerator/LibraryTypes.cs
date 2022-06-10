@@ -49,6 +49,7 @@ internal class LibraryTypes
     public INamedTypeSymbol SolidRowGroupFactory => Type("Outcompute.ColumnStore.SolidRowGroupFactory`1");
     public INamedTypeSymbol UseActivatorAttribute => Type("Orleans.UseActivatorAttribute");
     public INamedTypeSymbol IActivator1 => Type("Orleans.Serialization.Activators.IActivator`1");
+    public INamedTypeSymbol IdAttribute => Type("Orleans.IdAttribute");
 
     private INamedTypeSymbol Type(string fullyQualifiedMetadataName)
     {

@@ -24,7 +24,7 @@ internal class ColumnSegment<TValue> : IColumnSegment<TValue>
         _sessions = sessions;
     }
 
-    public ColumnSegmentStats GetStats() => _stats;
+    public IColumnSegmentStats GetStats() => _stats;
 
     /// <summary>
     /// Performs a full scan of the segment and yields every underlying source value as a regular collection would.

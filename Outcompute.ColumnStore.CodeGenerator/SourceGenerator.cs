@@ -27,15 +27,21 @@ namespace Outcompute.ColumnStore.CodeGenerator
             foreach (var item in receiver.Model.ColumnStoreTypes)
             {
                 // create a flat model description to make code generation easier
-                var descriptor = new ColumnStoreTypeDescription
+                var descriptor = new Model
                 {
                     GeneratedNamespace = $"{item.ContainingNamespace.ToDisplayString()}.ColumnStoreCodeGen",
                     Symbol = item,
                 };
 
-                foreach (var property in item.GetMembers().OfType<IPropertySymbol>().Where(x => x.GetAttributes().Any(x => x.AttributeClass?.Equals(library.ColumnStorePropertyAttribute, SymbolEqualityComparer.Default) ?? false)))
+                // add properties
+                foreach (var property in item.GetMembers().OfType<IPropertySymbol>())
                 {
-                    descriptor.Properties.Add(property);
+                    var idAttribute = property.GetAttributes().SingleOrDefault(x => x.AttributeClass?.Equals(library.IdAttribute, SymbolEqualityComparer.Default) ?? false);
+                    if (idAttribute is not null)
+                    {
+                        descriptor.Properties.Add(property);
+                        descriptor.Ids.Add((ushort)idAttribute.ConstructorArguments[0].Value!);
+                    }
                 }
 
                 // generate delta row code

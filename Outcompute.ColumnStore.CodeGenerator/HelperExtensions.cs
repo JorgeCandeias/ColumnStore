@@ -33,7 +33,9 @@ internal static class HelperExtensions
                 builder.Append(separator);
             }
 
-            builder.Append(render(item, i++));
+            builder.Append(render(item, i));
+
+            i++;
         }
 
         return builder.ToString();

@@ -48,41 +48,41 @@ public class DeltaRowGroupTests
         var id = 123;
 
         //act
-        var rows = Create(id, 1000);
+        var group = Create(id, 1000);
 
         // assert empty state
-        Assert.Equal(id, rows.Id);
-        Assert.Equal(RowGroupState.Open, rows.State);
-        Assert.Empty(rows);
+        Assert.Equal(id, group.Id);
+        Assert.Equal(RowGroupState.Open, group.State);
+        Assert.Empty(group);
 
         // assert empty stats
-        Assert.Equal(id, rows.Stats.Id);
-        Assert.Equal(0, rows.Stats.RowCount);
-        Assert.Equal(5, rows.Stats.ColumnSegmentStats.Count);
+        Assert.Equal(id, group.Stats.Id);
+        Assert.Equal(0, group.Stats.RowCount);
+        Assert.Equal(5, group.Stats.ColumnSegmentStats.Count);
 
         // assert property stats
-        Assert.Equal(nameof(TestModel.Prop1), rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].Name);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
+        Assert.Equal(nameof(TestModel.Prop1), group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].Name);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
 
-        Assert.Equal(nameof(TestModel.Prop2), rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].Name);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
+        Assert.Equal(nameof(TestModel.Prop2), group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].Name);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
 
-        Assert.Equal(nameof(TestModel.Prop3), rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].Name);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
+        Assert.Equal(nameof(TestModel.Prop3), group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].Name);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
 
-        Assert.Equal(nameof(TestModel.Prop4), rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].Name);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
+        Assert.Equal(nameof(TestModel.Prop4), group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].Name);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
 
-        Assert.Equal(nameof(TestModel.Prop5), rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].Name);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
+        Assert.Equal(nameof(TestModel.Prop5), group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].Name);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
 
         // assert empty collection
-        Assert.Empty(rows);
+        Assert.Empty(group);
     }
 
     [Fact]
@@ -189,6 +189,7 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.Count, output.Count);
+        Assert.Equal(input.Stats, output.Stats);
         Assert.True(input.GetReadOnlySequence().ToArray().SequenceEqual(output.GetReadOnlySequence().ToArray()));
     }
 

@@ -8,60 +8,78 @@ namespace Outcompute.ColumnStore.CodeGenerator;
 
 internal static class DeltaRowGroupGenerator
 {
-    public static SourceResult Generate(Compilation compilation, ColumnStoreTypeDescription type, LibraryTypes library)
+    public static SourceResult Generate(Compilation compilation, Model model, LibraryTypes library)
     {
-        var modelNamespace = type.Symbol.ContainingNamespace.ToDisplayString();
-        var modelTypeName = type.Symbol.ToDisplayString();
+        var modelNamespace = model.Symbol.ContainingNamespace.ToDisplayString();
+        var modelTypeName = model.Symbol.ToDisplayString();
         var modelTitle = modelTypeName.Substring(modelNamespace.Length);
         var typeName = $"{modelTitle.Replace(".", "")}{library.DeltaRowGroup1.Name}";
 
         var code = $@"
 
-            namespace {type.Symbol.ContainingNamespace}.{Constants.CodeGenNamespace}
+            namespace {model.Symbol.ContainingNamespace}.{Constants.CodeGenNamespace}
             {{
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [{library.GenerateSerializerAttribute}]
                 [{library.UseActivatorAttribute}]
-                internal class {typeName}: {library.DeltaRowGroup1.Construct(type.Symbol)}
+                internal class {typeName}: {library.DeltaRowGroup1.Construct(model.Symbol)}
                 {{
-                    {type.Properties.Render(p => $"private readonly {library.HashSet.Construct(p.Type)} _{p.Name}Set = new();")}
+                    [{library.IdAttribute}(1)]
+                    private readonly SetsHolder _sets = new();
 
-                    {type.Properties.Render(p => $"private readonly {library.ColumnSegmentStatsBuilder} _{p.Name}Stats = {library.ColumnSegmentStats}.CreateBuilder();")}
+                    [{library.IdAttribute}(2)]
+                    private readonly StatsHolder _stats = new();
 
                     public {typeName}(
                         {library.Int32} id,
                         {library.Int32} capacity,
-                        {library.Serializer1.Construct(type.Symbol)} serializer,
+                        {library.Serializer1.Construct(model.Symbol)} serializer,
                         {library.SerializerSessionPool} sessions)
                         : base(id, capacity, serializer, sessions)
                     {{
-                        {type.Properties.Render(p => @$"_{p.Name}Stats.Name = ""{p.Name}"";")}
+                        {model.Properties.Render(p => @$"_stats.{p.Name}Stats.Name = ""{p.Name}"";")}
                     }}
 
-                    protected override void OnAdded({type.Symbol} row)
+                    protected override void OnAdded({model.Symbol} row)
                     {{
-                        {type.Properties.Render(p => $@"
-                        if (_{p.Name}Set.Add(row.{p.Name}))
+                        {model.Properties.Render(p => $@"
+                        if (_sets.{p.Name}Set.Add(row.{p.Name}))
                         {{
-                            _{p.Name}Stats.DistinctValueCount = _{p.Name}Set.Count;
+                            _stats.{p.Name}Stats.DistinctValueCount = _sets.{p.Name}Set.Count;
                         }}
 
                         if (row.{p.Name} == default)
                         {{
-                            _{p.Name}Stats.DefaultValueCount++;
+                            _stats.{p.Name}Stats.DefaultValueCount++;
                         }}
                         ")}
                     }}
 
                     protected override void OnBuildStats({library.RowGroupStatsBuilder} builder)
                     {{
-                        {type.Properties.Render(p => $@"builder.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
+                        {model.Properties.Render(p => $@"builder.ColumnSegmentStats[""{p.Name}""] = _stats.{p.Name}Stats.ToImmutable();")}
+                    }}
+
+                    [{library.GenerateSerializerAttribute}]
+                    internal class SetsHolder
+                    {{
+                        {model.Properties.Render((p, i) => @$"
+                        [{library.IdAttribute}({model.Ids[i]})]
+                        public {library.HashSet.Construct(p.Type)} {p.Name}Set = new();")}
+                    }}
+
+                    [{library.GenerateSerializerAttribute}]
+                    internal class StatsHolder
+                    {{
+                        {model.Properties.Render((p, i) => @$"
+                        [{library.IdAttribute}({model.Ids[i]})]
+                        public {library.ColumnSegmentStatsBuilder} {p.Name}Stats = {library.ColumnSegmentStats}.CreateBuilder();")}
                     }}
                 }}
 
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
-                [{library.RegisterDeltaRowFactoryAttribute}(typeof({type.Symbol}))]
-                internal class {typeName}Factory: {library.DeltaRowGroupFactory1.Construct(type.Symbol)}
+                [{library.RegisterDeltaRowFactoryAttribute}(typeof({model.Symbol}))]
+                internal class {typeName}Factory: {library.DeltaRowGroupFactory1.Construct(model.Symbol)}
                 {{
                     private readonly {library.ObjectFactory} _factory;
 
@@ -80,7 +98,7 @@ internal static class DeltaRowGroupGenerator
                 [{library.RegisterActivatorAttribute}]
                 internal class {typeName}Activator:
                     {library.IActivator1.ToDisplayString().Replace("<T>", $"<{typeName}>")},
-                    {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(type.Symbol)}>")}
+                    {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(model.Symbol)}>")}
                 {{
                     private readonly {typeName}Factory _factory;
 
@@ -94,7 +112,7 @@ internal static class DeltaRowGroupGenerator
                         return _factory.Create(0, 0);
                     }}
 
-                    {library.DeltaRowGroup1.Construct(type.Symbol)} {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(type.Symbol)}>")}.Create() => Create();
+                    {library.DeltaRowGroup1.Construct(model.Symbol)} {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(model.Symbol)}>")}.Create() => Create();
                 }}
             }}
         ";
