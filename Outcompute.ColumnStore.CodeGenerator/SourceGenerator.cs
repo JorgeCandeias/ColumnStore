@@ -20,7 +20,7 @@ namespace Outcompute.ColumnStore.CodeGenerator
             }
 
             var assemblyName = context.Compilation.AssemblyName ?? "Assembly";
-            var libs = LibraryTypes.FromCompilation(context.Compilation);
+            var libs = new LibraryTypes(context.Compilation);
 
             var result = ColumnStoreSourceDriver.Generate(context.Compilation, receiver.Model, libs);
             var text = result.NormalizeWhitespace().ToFullString();

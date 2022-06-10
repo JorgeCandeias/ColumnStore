@@ -24,6 +24,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Microsoft.Orleans.Core" Version="4.0.0-preview1" />
 		<PackageReference Include="Microsoft.Orleans.Serialization" Version="4.0.0-preview1" />
 		<PackageReference Include="SonarAnalyzer.CSharp" Version="8.39.0.47922">
 			<PrivateAssets>all</PrivateAssets>

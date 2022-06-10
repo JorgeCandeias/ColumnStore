@@ -13,22 +13,17 @@ namespace Outcompute.ColumnStore;
 [GenerateSerializer]
 public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 {
-    private readonly ColumnStoreOptions _options;
     private readonly Serializer<TRow> _serializer;
     private readonly SerializerSessionPool _sessions;
 
-    protected DeltaRowGroup()
-    { 
-    }
-
-    protected DeltaRowGroup(int id, ColumnStoreOptions options, Serializer<TRow> serializer, SerializerSessionPool sessions)
+    protected DeltaRowGroup(int id, int capacity, Serializer<TRow> serializer, SerializerSessionPool sessions)
     {
         Guard.IsGreaterThanOrEqualTo(id, 0, nameof(id));
-        Guard.IsNotNull(options, nameof(options));
+        Guard.IsGreaterThanOrEqualTo(capacity, 0, nameof(capacity));
         Guard.IsNotNull(serializer, nameof(serializer));
 
-        _id = id;
-        _options = options;
+        Id = id;
+        Capacity = capacity;
         _serializer = serializer;
         _sessions = sessions;
     }
@@ -41,10 +36,13 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     #region State
 
     [Id(1)]
-    private readonly int _id;
+    public int Id { get; }
 
     [Id(2)]
-    private RowGroupState _state = RowGroupState.Open;
+    public int Capacity { get; }
+
+    [Id(3)]
+    public RowGroupState State { get; private set; } = RowGroupState.Open;
 
     // todo: handle disposing on the entire object graph
     private readonly RecyclableMemoryStream _data = (RecyclableMemoryStream)MemoryStreamManager.Default.GetStream();
@@ -52,10 +50,14 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     // todo: this is probably inneficient due to buffer copies, look into adding a codec for ReadOnlySequence or even RecyclableMemoryStream itself
     // todo: the generated field accessor is treating private and protected properties as fields, look into this
     // todo: alternatively use a surrogate to isolate serialization from state
-    [Id(3)]
+    [Id(4)]
     public ReadOnlyMemory<byte> DataBytes
     {
-        get => _data.GetBuffer().AsMemory().Slice(0, (int)_data.Length);
+        get
+        {
+            return _data.GetBuffer().AsMemory()[..(int)_data.Length];
+        }
+
         set
         {
             _data.SetLength(0);
@@ -63,25 +65,15 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         }
     }
 
-    [Id(4)]
-    private RowGroupStats? _stats;
-
     [Id(5)]
-    private int _count;
-
-    #endregion State
-
-    #region IDeltaRowGroup
-
-    public int Id => _id;
-
-    public RowGroupState State => _state;
+    private RowGroupStats? _stats;
 
     public IRowGroupStats Stats => _stats ??= BuildStats();
 
-    public int Count => _count;
+    [Id(6)]
+    public int Count { get; private set; }
 
-    #endregion IDeltaRowGroup
+    #endregion State
 
     private void Invalidate()
     {
@@ -125,9 +117,9 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     /// </summary>
     private void TryClose()
     {
-        if (Count >= _options.RowGroupSizeThreshold)
+        if (Count >= Capacity)
         {
-            _state = RowGroupState.Closed;
+            State = RowGroupState.Closed;
         }
     }
 
@@ -152,7 +144,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     {
         _serializer.Serialize(row, _data);
 
-        _count++;
+        Count++;
     }
 
     /// <summary>
@@ -185,7 +177,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     /// </summary>
     public void Close()
     {
-        _state = RowGroupState.Closed;
+        State = RowGroupState.Closed;
     }
 
     public IEnumerator<TRow> GetEnumerator()

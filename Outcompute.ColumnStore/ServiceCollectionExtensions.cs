@@ -10,10 +10,34 @@ public static class ServiceCollectionExtensions
 
         return services
             .AddOptions()
+            .AddGeneratedFactories()
             .AddSingleton(typeof(IColumnStoreFactory<>), typeof(ColumnStoreFactory<>))
-            .AddSingleton(typeof(IDeltaRowGroupFactory<>), typeof(DeltaRowGroupFactory<>))
             .AddSingleton(typeof(IDeltaStoreFactory<>), typeof(DeltaStoreFactory<>))
             .AddSingleton(typeof(IColumnSegmentBuilderFactory<>), typeof(ColumnSegmentBuilderFactory<>))
             .AddTransient(typeof(ColumnSegmentBuilder<>));
+    }
+
+    private static IServiceCollection AddGeneratedFactories(this IServiceCollection services)
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            foreach (var implementation in assembly.GetTypes())
+            {
+                if (implementation.IsDefined(typeof(RegisterDeltaRowFactoryAttribute), false))
+                {
+                    services.AddSingleton(implementation);
+
+                    var service = implementation.GetInterface(typeof(IDeltaRowGroupFactory<>).Name);
+                    if (service is not null)
+                    {
+                        services.AddSingleton(service, sp => sp.GetRequiredService(implementation));
+                    }
+                }
+
+                // todo
+            }
+        }
+
+        return services;
     }
 }

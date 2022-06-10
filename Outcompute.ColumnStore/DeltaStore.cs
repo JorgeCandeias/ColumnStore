@@ -17,7 +17,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
         _options = options;
         _deltaRowGroupFactory = deltaRowGroupFactory;
 
-        _active = _deltaRowGroupFactory.Create(_ids++, _options);
+        _active = _deltaRowGroupFactory.Create(_ids++, _options.RowGroupSizeThreshold);
         _groups.Add(_active);
     }
 
@@ -35,7 +35,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         if (_active.State == RowGroupState.Closed)
         {
-            _active = _deltaRowGroupFactory.Create(_ids++, _options);
+            _active = _deltaRowGroupFactory.Create(_ids++, _options.RowGroupSizeThreshold);
             _groups.Add(_active);
         }
 
@@ -50,7 +50,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         if (_active.State == RowGroupState.Closed)
         {
-            _active = _deltaRowGroupFactory.Create(_ids++, _options);
+            _active = _deltaRowGroupFactory.Create(_ids++, _options.RowGroupSizeThreshold);
             _groups.Add(_active);
         }
 

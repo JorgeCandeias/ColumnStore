@@ -22,11 +22,11 @@ public class DeltaRowGroupTests
         _generatedType = FindType($"{typeof(DeltaRowGroupTests).Namespace}.{CodeGenNamespace}.{nameof(TestModel)}{typeof(DeltaRowGroup<>).Name.Replace("`1", "")}");
     }
 
-    private TestModelDeltaRowGroup Create(int id, ColumnStoreOptions options, params TestModel[] data)
+    private TestModelDeltaRowGroup Create(int id, int capacity, params TestModel[] data)
     {
         var group = (TestModelDeltaRowGroup)_provider
             .GetRequiredService<IDeltaRowGroupFactory<TestModel>>()
-            .Create(id, options);
+            .Create(id, capacity);
 
         group.AddRange(data);
 
@@ -63,7 +63,7 @@ public class DeltaRowGroupTests
         var id = 123;
 
         //act
-        var rows = Create(id, new ColumnStoreOptions());
+        var rows = Create(id, 1000);
 
         // assert empty state
         Assert.Equal(id, rows.Id);
@@ -104,7 +104,7 @@ public class DeltaRowGroupTests
     public void AddsOne()
     {
         // arrange
-        var rows = Create(123, new ColumnStoreOptions());
+        var rows = Create(123, 1000);
 
         // act
         foreach (var item in _data)
@@ -147,7 +147,7 @@ public class DeltaRowGroupTests
     public void AddsMany()
     {
         // arrange
-        var rows = Create(123, new ColumnStoreOptions());
+        var rows = Create(123, 1000);
 
         // act
         rows.AddRange(_data);
@@ -188,23 +188,29 @@ public class DeltaRowGroupTests
     {
         // arrange
         var serializer = _provider.GetRequiredService<Serializer<TestModelDeltaRowGroup>>();
-        var group = Create(123, new ColumnStoreOptions(), _data);
+        var input = Create(123, 1000, _data);
 
         // act - serialize
         using var stream = new MemoryStream();
-        serializer.Serialize(group, stream, 0);
+        serializer.Serialize(input, stream, 0);
 
         // act - deserialize
         stream.Position = 0;
-        var result = serializer.Deserialize(stream);
+        var output = serializer.Deserialize(stream);
 
-        Assert.NotNull(serializer);
+        // assert
+        Assert.NotNull(output);
+        Assert.Equal(input.Id, output.Id);
+        Assert.Equal(input.Capacity, output.Capacity);
+        Assert.Equal(input.State, output.State);
+        Assert.Equal(input.DataBytes.Length, output.DataBytes.Length);
+        Assert.Equal(input.Count, output.Count);
     }
 
     [Fact]
     public void SerializesAsUntypedFromFactory()
     {
-        var generatedInstance = _provider.GetRequiredService<IDeltaRowGroupFactory<TestModel>>().Create(1, new ColumnStoreOptions());
+        var generatedInstance = _provider.GetRequiredService<IDeltaRowGroupFactory<TestModel>>().Create(1, 1000);
         var generatedType = generatedInstance.GetType();
         var serializerType = typeof(Serializer<>).MakeGenericType(generatedType);
         var serializer = _provider.GetRequiredService(serializerType);

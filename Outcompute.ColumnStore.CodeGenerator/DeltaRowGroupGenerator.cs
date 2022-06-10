@@ -9,31 +9,31 @@ internal static class DeltaRowGroupGenerator
     public static MemberDeclarationSyntax Generate(ColumnStoreTypeDescription type, LibraryTypes library)
     {
         var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup.Name}";
-        var baseTypeName = library.DeltaRowGroup.ToDisplayString().Replace("<TRow>", $"<{type.Symbol.ToDisplayString()}>");
 
         var code = $@"
 
             namespace {type.GeneratedNamespace}
             {{
-                [GeneratedCode(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
-                [GenerateSerializer]
-                [UseActivator]
-                internal class {generatedTypeName}: {baseTypeName}
+                [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
+                [{library.GenerateSerializerAttribute}]
+                [{library.UseActivatorAttribute}]
+                internal class {generatedTypeName}: {library.DeltaRowGroup.Construct(type.Symbol)}
                 {{
-                    private {generatedTypeName}()
-                    {{
-                    }}
+                    {type.Properties.Render(p => $"private readonly {library.HashSet.Construct(p.Type)} _{p.Name}Set = new();")}
 
-                    {type.Properties.Render(p => $"private readonly {library.HashSet.Name}<{p.Type.ToDisplayString()}> _{p.Name}Set = new();")}
+                    {type.Properties.Render(p => $"private readonly {library.ColumnSegmentStatsBuilder} _{p.Name}Stats = {library.ColumnSegmentStats}.CreateBuilder();")}
 
-                    {type.Properties.Render(p => $"private readonly ColumnSegmentStats.Builder _{p.Name}Stats = ColumnSegmentStats.CreateBuilder();")}
-
-                    public {generatedTypeName}(int id, {library.ColumnStoreOptions.Name} options, {library.Serializer1.ToDisplayString().Replace("<T>", $"<{type.Symbol.ToDisplayString()}>")} serializer, {library.SerializerSessionPool.ToDisplayString()} sessions) : base(id, options, serializer, sessions)
+                    public {generatedTypeName}(
+                        {library.Int32} id,
+                        {library.Int32} capacity,
+                        {library.Serializer1.Construct(type.Symbol)} serializer,
+                        {library.SerializerSessionPool} sessions)
+                        : base(id, capacity, serializer, sessions)
                     {{
                         {type.Properties.Render(p => @$"_{p.Name}Stats.Name = ""{p.Name}"";")}
                     }}
 
-                    protected override void OnAdded({type.Symbol.ToDisplayString()} row)
+                    protected override void OnAdded({type.Symbol} row)
                     {{
                         {type.Properties.Render(p => $@"
                         if (_{p.Name}Set.Add(row.{p.Name}))
@@ -48,22 +48,46 @@ internal static class DeltaRowGroupGenerator
                         ")}
                     }}
 
-                    protected override void OnBuildStats(RowGroupStats.Builder builder)
+                    protected override void OnBuildStats({library.RowGroupStatsBuilder} builder)
                     {{
                         {type.Properties.Render(p => $@"builder.ColumnSegmentStats[""{p.Name}""] = _{p.Name}Stats.ToImmutable();")}
                     }}
                 }}
 
-                [RegisterActivator]
-                internal class {generatedTypeName}Activator: IActivator<{generatedTypeName}>
+                [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
+                [{library.RegisterDeltaRowFactoryAttribute}]
+                internal class {generatedTypeName}Factory: {library.IDeltaRowGroupFactory1.Construct(type.Symbol)}
                 {{
-                    private readonly 
-                    public {generatedTypeName}Activator()
-                    {{                        
+                    private readonly {library.IServiceProvider} _provider;
+                    private readonly {library.ObjectFactory} _factory;
+
+                    public {generatedTypeName}Factory({library.IServiceProvider} provider)
+                    {{
+                        _provider = provider;
+                        _factory = {library.ActivatorUtilities}.CreateFactory(typeof({generatedTypeName}), new[] {{ typeof({library.Int32}), typeof({library.Int32})}});
+                    }}
+
+                    public {generatedTypeName} Create({library.Int32} id, {library.Int32} capacity)
+                    {{
+                        return ({generatedTypeName}) _factory.Invoke(_provider, new object[] {{ id, capacity }});
+                    }}
+
+                    {library.IDeltaRowGroup1.Construct(type.Symbol)} {library.IDeltaRowGroupFactory1.Construct(type.Symbol)}.Create({library.Int32} id, {library.Int32} capacity) => Create(id, capacity);
+                }}
+
+                [{library.RegisterActivatorAttribute}]
+                internal class {generatedTypeName}Activator: {library.IActivator1.ToDisplayString().Replace("<T>", $"<{generatedTypeName}>")}
+                {{
+                    private readonly {generatedTypeName}Factory _factory;
+
+                    public {generatedTypeName}Activator({generatedTypeName}Factory factory)
+                    {{
+                        _factory = factory;
                     }}
 
                     public {generatedTypeName} Create()
-                    {{  
+                    {{
+                        return _factory.Create(0, 0);
                     }}
                 }}
             }}

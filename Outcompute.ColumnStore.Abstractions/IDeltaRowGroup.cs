@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface IDeltaRowGroup<TRow> : IRowGroup<TRow>
+public interface IDeltaRowGroup<TRow> : IRowGroup<TRow>
 {
     void Add(TRow row);
 

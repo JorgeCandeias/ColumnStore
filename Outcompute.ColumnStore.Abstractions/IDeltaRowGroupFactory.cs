@@ -1,6 +1,6 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal interface IDeltaRowGroupFactory<TRow>
+public interface IDeltaRowGroupFactory<TRow>
 {
-    IDeltaRowGroup<TRow> Create(int id, ColumnStoreOptions options);
+    IDeltaRowGroup<TRow> Create(int id, int capacity);
 }
