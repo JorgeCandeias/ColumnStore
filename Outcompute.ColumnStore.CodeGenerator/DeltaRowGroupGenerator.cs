@@ -8,7 +8,7 @@ namespace Outcompute.ColumnStore.CodeGenerator;
 
 internal static class DeltaRowGroupGenerator
 {
-    public static SourceText Generate(ColumnStoreTypeDescription type, LibraryTypes library)
+    public static SourceResult Generate(Compilation compilation, ColumnStoreTypeDescription type, LibraryTypes library)
     {
         var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup1.Name}";
 
@@ -96,6 +96,10 @@ internal static class DeltaRowGroupGenerator
             }}
         ";
 
-        return SourceText.From(CSharpSyntaxTree.ParseText(code).GetCompilationUnitRoot().NormalizeWhitespace().ToFullString(), Encoding.UTF8);
+        var tree = CSharpSyntaxTree.ParseText(code);
+        var text = SourceText.From(tree.GetRoot().NormalizeWhitespace().ToFullString(), Encoding.UTF8);
+        var name = $"{compilation.AssemblyName}.{Constants.ColumnStoreCodeGenNamespace}.{generatedTypeName}.g.cs";
+
+        return new SourceResult(tree, text, name);
     }
 }

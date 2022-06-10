@@ -39,9 +39,9 @@ namespace Outcompute.ColumnStore.CodeGenerator
                 }
 
                 // generate delta row code
-                var s = DeltaRowGroupGenerator.Generate(descriptor, library);
-                sources.Add(s);
-                context.AddSource($"{context.Compilation.AssemblyName}.{nameof(ColumnStore)}.{nameof(DeltaRowGroupGenerator)}.g.cs", s);
+                var generated = DeltaRowGroupGenerator.Generate(context.Compilation, descriptor, library);
+                sources.Add(generated.Text);
+                context.AddSource(generated.Name, generated.Text);
             }
 
             // toremove
