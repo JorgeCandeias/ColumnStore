@@ -12,11 +12,13 @@ internal class DeltaStoreFactory<TRow> : IDeltaStoreFactory<TRow>
         Guard.IsNotNull(provider, nameof(provider));
 
         _provider = provider;
-        _factory = ActivatorUtilities.CreateFactory(typeof(DeltaStore<TRow>), new[] { typeof(ColumnStoreOptions) });
+        _factory = ActivatorUtilities.CreateFactory(typeof(DeltaStore<TRow>), new[] { typeof(int) });
     }
 
-    public IDeltaStore<TRow> Create(int rowGroupCapacity)
+    public DeltaStore<TRow> Create(int rowGroupCapacity)
     {
-        return (IDeltaStore<TRow>)_factory.Invoke(_provider, new object[] { rowGroupCapacity });
+        return (DeltaStore<TRow>)_factory.Invoke(_provider, new object[] { rowGroupCapacity });
     }
+
+    IDeltaStore<TRow> IDeltaStoreFactory<TRow>.Create(int rowGroupCapacity) => Create(rowGroupCapacity);
 }
