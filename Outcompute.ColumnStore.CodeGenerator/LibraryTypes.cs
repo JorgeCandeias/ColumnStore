@@ -23,7 +23,8 @@ internal class LibraryTypes
     public INamedTypeSymbol ColumnStoreAttribute => Type("Outcompute.ColumnStore.ColumnStoreAttribute");
     public INamedTypeSymbol ColumnStoreOptions => Type("Outcompute.ColumnStore.ColumnStoreOptions");
     public INamedTypeSymbol ColumnStorePropertyAttribute => Type("Outcompute.ColumnStore.ColumnStorePropertyAttribute");
-    public INamedTypeSymbol DeltaRowGroup => Type("Outcompute.ColumnStore.DeltaRowGroup`1");
+    public INamedTypeSymbol DeltaRowGroup1 => Type("Outcompute.ColumnStore.DeltaRowGroup`1");
+    public INamedTypeSymbol DeltaRowGroupFactory1 => Type("Outcompute.ColumnStore.DeltaRowGroupFactory`1");
     public INamedTypeSymbol GeneratedCodeAttribute => Type("System.CodeDom.Compiler.GeneratedCodeAttribute");
     public INamedTypeSymbol GenerateSerializerAttribute => Type("Orleans.GenerateSerializerAttribute");
     public INamedTypeSymbol HashSet => Type("System.Collections.Generic.HashSet`1");

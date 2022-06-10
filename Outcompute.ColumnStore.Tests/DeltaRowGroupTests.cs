@@ -184,7 +184,7 @@ public class DeltaRowGroupTests
     }
 
     [Fact]
-    public void Serializes()
+    public void RoundtripsViaConcreteSerializer()
     {
         // arrange
         var serializer = _provider.GetRequiredService<Serializer<TestModelDeltaRowGroup>>();
@@ -208,28 +208,31 @@ public class DeltaRowGroupTests
     }
 
     [Fact]
-    public void SerializesAsUntypedFromFactory()
+    public void RoundtripsViaAbstractSerializer()
     {
-        var generatedInstance = _provider.GetRequiredService<IDeltaRowGroupFactory<TestModel>>().Create(1, 1000);
-        var generatedType = generatedInstance.GetType();
-        var serializerType = typeof(Serializer<>).MakeGenericType(generatedType);
-        var serializer = _provider.GetRequiredService(serializerType);
+        // arrange
+        var inputSerializer = _provider.GetRequiredService<Serializer<TestModelDeltaRowGroup>>();
+        var input = Create(123, 1000, _data);
+        var outputSerializer = _provider.GetRequiredService<Serializer<DeltaRowGroup<TestModel>>>();
 
-        Assert.NotNull(serializer);
+        // act - serialize
+        using var stream = new MemoryStream();
+        inputSerializer.Serialize(input, stream, 0);
 
-        // todo
+        // act - deserialize
+        stream.Position = 0;
+        var output = outputSerializer.Deserialize(stream);
+
+        // assert
+        Assert.NotNull(output);
+        Assert.Equal(input.Id, output.Id);
+        Assert.Equal(input.Capacity, output.Capacity);
+        Assert.Equal(input.State, output.State);
+        Assert.Equal(input.DataBytes.Length, output.DataBytes.Length);
+        Assert.Equal(input.Count, output.Count);
     }
 
-    [Fact]
-    public void SerializesAsTyped()
-    {
-        var serializer = _provider.GetRequiredService<Serializer<ColumnStoreCodeGen.TestModelDeltaRowGroup>>();
-
-        Assert.NotNull(serializer);
-
-        // todo
-    }
-
+    [Id(1001)]
     [GenerateSerializer, ColumnStore]
     public record struct TestModel(
         [property: Id(1), ColumnStoreProperty] int Prop1,

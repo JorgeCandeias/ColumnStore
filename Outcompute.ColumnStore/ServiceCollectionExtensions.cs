@@ -25,13 +25,16 @@ public static class ServiceCollectionExtensions
             {
                 if (implementation.IsDefined(typeof(RegisterDeltaRowFactoryAttribute), false))
                 {
+                    var attribute = (RegisterDeltaRowFactoryAttribute)implementation.GetCustomAttributes(typeof(RegisterDeltaRowFactoryAttribute), false)[0];
+
+                    // add the service on its own
                     services.AddSingleton(implementation);
 
-                    var service = implementation.GetInterface(typeof(IDeltaRowGroupFactory<>).Name);
-                    if (service is not null)
-                    {
-                        services.AddSingleton(service, sp => sp.GetRequiredService(implementation));
-                    }
+                    // add the service against the interface
+                    services.AddSingleton(typeof(IDeltaRowGroupFactory<>).MakeGenericType(attribute.ModelType), sp => sp.GetRequiredService(implementation));
+
+                    // add the service against the base class
+                    services.AddSingleton(typeof(DeltaRowGroupFactory<>).MakeGenericType(attribute.ModelType), sp => sp.GetRequiredService(implementation));
                 }
 
                 // todo

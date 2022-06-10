@@ -8,7 +8,7 @@ internal static class DeltaRowGroupGenerator
 {
     public static MemberDeclarationSyntax Generate(ColumnStoreTypeDescription type, LibraryTypes library)
     {
-        var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup.Name}";
+        var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup1.Name}";
 
         var code = $@"
 
@@ -17,7 +17,7 @@ internal static class DeltaRowGroupGenerator
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [{library.GenerateSerializerAttribute}]
                 [{library.UseActivatorAttribute}]
-                internal class {generatedTypeName}: {library.DeltaRowGroup.Construct(type.Symbol)}
+                internal class {generatedTypeName}: {library.DeltaRowGroup1.Construct(type.Symbol)}
                 {{
                     {type.Properties.Render(p => $"private readonly {library.HashSet.Construct(p.Type)} _{p.Name}Set = new();")}
 
@@ -55,28 +55,27 @@ internal static class DeltaRowGroupGenerator
                 }}
 
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
-                [{library.RegisterDeltaRowFactoryAttribute}]
-                internal class {generatedTypeName}Factory: {library.IDeltaRowGroupFactory1.Construct(type.Symbol)}
+                [{library.RegisterDeltaRowFactoryAttribute}(typeof({type.Symbol}))]
+                internal class {generatedTypeName}Factory: {library.DeltaRowGroupFactory1.Construct(type.Symbol)}
                 {{
-                    private readonly {library.IServiceProvider} _provider;
                     private readonly {library.ObjectFactory} _factory;
 
-                    public {generatedTypeName}Factory({library.IServiceProvider} provider)
+                    public {generatedTypeName}Factory({library.IServiceProvider} serviceProvider): base(serviceProvider)
                     {{
-                        _provider = provider;
                         _factory = {library.ActivatorUtilities}.CreateFactory(typeof({generatedTypeName}), new[] {{ typeof({library.Int32}), typeof({library.Int32})}});
                     }}
 
-                    public {generatedTypeName} Create({library.Int32} id, {library.Int32} capacity)
+                    public override {generatedTypeName} Create({library.Int32} id, {library.Int32} capacity)
                     {{
-                        return ({generatedTypeName}) _factory.Invoke(_provider, new object[] {{ id, capacity }});
+                        return ({generatedTypeName}) _factory.Invoke(ServiceProvider, new object[] {{ id, capacity }});
                     }}
-
-                    {library.IDeltaRowGroup1.Construct(type.Symbol)} {library.IDeltaRowGroupFactory1.Construct(type.Symbol)}.Create({library.Int32} id, {library.Int32} capacity) => Create(id, capacity);
                 }}
 
+                [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [{library.RegisterActivatorAttribute}]
-                internal class {generatedTypeName}Activator: {library.IActivator1.ToDisplayString().Replace("<T>", $"<{generatedTypeName}>")}
+                internal class {generatedTypeName}Activator:
+                    {library.IActivator1.ToDisplayString().Replace("<T>", $"<{generatedTypeName}>")},
+                    {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(type.Symbol)}>")}
                 {{
                     private readonly {generatedTypeName}Factory _factory;
 
@@ -89,6 +88,8 @@ internal static class DeltaRowGroupGenerator
                     {{
                         return _factory.Create(0, 0);
                     }}
+
+                    {library.DeltaRowGroup1.Construct(type.Symbol)} {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(type.Symbol)}>")}.Create() => Create();
                 }}
             }}
         ";
