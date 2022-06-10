@@ -10,5 +10,5 @@ public interface IDeltaStore<TRow> : IReadOnlyCollection<TRow>
 
     bool TryTakeClosed(out IRowGroup<TRow> group);
 
-    InnerStoreStats GetStats();
+    InnerStoreStats Stats { get; }
 }

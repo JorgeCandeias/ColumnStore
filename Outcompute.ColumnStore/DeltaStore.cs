@@ -1,12 +1,12 @@
-﻿using System.Collections;
+﻿using Orleans;
+using System.Collections;
 
 namespace Outcompute.ColumnStore;
 
-// todo: configure serialization
+[GenerateSerializer]
 internal class DeltaStore<TRow> : IDeltaStore<TRow>
 {
     private readonly DeltaRowGroupFactory<TRow> _deltaRowGroupFactory;
-    private readonly int _rowGroupCapacity;
 
     public DeltaStore(int rowGroupCapacity, DeltaRowGroupFactory<TRow> deltaRowGroupFactory)
     {
@@ -15,60 +15,46 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
 
         _rowGroupCapacity = rowGroupCapacity;
         _deltaRowGroupFactory = deltaRowGroupFactory;
-
-        _active = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
-        _groups.Add(_active);
     }
 
-    private readonly List<IDeltaRowGroup<TRow>> _groups = new();
+    [Id(1)]
+    private readonly int _rowGroupCapacity;
 
-    private IDeltaRowGroup<TRow> _active;
-
-    private bool _invalidated = true;
-
+    [Id(2)]
     private int _ids;
 
+    [Id(3)]
+    private readonly List<DeltaRowGroup<TRow>> _groups = new();
+
+    [Id(4)]
     public int Count { get; private set; }
 
     public void Add(TRow row)
     {
-        if (_active.State == RowGroupState.Closed)
-        {
-            _active = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
-            _groups.Add(_active);
-        }
+        GetOrAddRowGroup().Add(row);
 
-        _active.Add(row);
-
-        _invalidated = true;
+        Invalidate();
 
         Count++;
     }
 
     public int AddRange(IEnumerable<TRow> rows)
     {
-        if (_active.State == RowGroupState.Closed)
-        {
-            _active = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
-            _groups.Add(_active);
-        }
-
-        var before = _active.Count;
-
-        _active.AddRange(rows);
-
-        var added = _active.Count - before;
+        var added = GetOrAddRowGroup().AddRange(rows);
 
         Count += added;
 
-        _invalidated = true;
+        Invalidate();
 
         return added;
     }
 
     public void Close()
     {
-        _active.Close();
+        if (_groups.Count > 0)
+        {
+            _groups[^1].Close();
+        }
     }
 
     public bool TryTakeClosed(out IRowGroup<TRow> group)
@@ -81,11 +67,8 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
                 {
                     _groups.Remove(item);
 
-                    _stats.RowCount -= item.Count;
-                    _stats.RowGroupStats.Remove(item.Id);
-                    _invalidated = true;
-
                     Count -= item.Count;
+                    Invalidate();
 
                     group = item;
                     return true;
@@ -97,24 +80,44 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
         return false;
     }
 
-    private readonly InnerStoreStats.Builder _stats = InnerStoreStats.CreateBuilder();
-
-    public InnerStoreStats GetStats()
+    private DeltaRowGroup<TRow> GetOrAddRowGroup()
     {
-        if (_invalidated)
+        if (_groups.Count > 0)
         {
-            _stats.RowCount = Count;
-
-            foreach (var group in _groups)
+            var group = _groups[^1];
+            if (group.State is RowGroupState.Open)
             {
-                _stats.RowGroupStats[group.Id] = group.Stats;
+                return group;
             }
-
-            _invalidated = false;
         }
 
-        return _stats.ToImmutable();
+        var created = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
+        _groups.Add(created);
+        return created;
     }
+
+    private InnerStoreStats? _stats;
+
+    private InnerStoreStats BuildStats()
+    {
+        var builder = InnerStoreStats.CreateBuilder();
+
+        builder.RowCount = Count;
+
+        foreach (var group in _groups)
+        {
+            builder.RowGroupStats[group.Id] = group.Stats;
+        }
+
+        return builder.ToImmutable();
+    }
+
+    private void Invalidate()
+    {
+        _stats = null;
+    }
+
+    public InnerStoreStats Stats => _stats ??= BuildStats();
 
     public IEnumerator<TRow> GetEnumerator()
     {

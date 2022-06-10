@@ -32,7 +32,7 @@ internal class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
         var builder = ColumnStoreStats.CreateBuilder();
 
         builder.RowCount = Count;
-        builder.DeltaStoreStats = _delta.GetStats();
+        builder.DeltaStoreStats = _delta.Stats;
 
         return builder.ToImmutable();
     }

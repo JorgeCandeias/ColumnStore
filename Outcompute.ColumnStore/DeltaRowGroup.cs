@@ -147,20 +147,22 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     /// Adds the specified batch to this row group.
     /// Will only attempt to close the row group after the entire batch is consumed.
     /// </summary>
-    public void AddRange(IEnumerable<TRow> rows)
+    public int AddRange(IEnumerable<TRow> rows)
     {
         EnsureOpen();
 
+        var added = 0;
         foreach (var row in rows)
         {
             Pack(row);
-
             OnAdded(row);
+            added++;
         }
 
         TryClose();
-
         Invalidate();
+
+        return added;
     }
 
     /// <summary>
