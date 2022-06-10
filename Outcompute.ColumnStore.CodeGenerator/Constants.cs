@@ -2,6 +2,6 @@
 {
     internal static class Constants
     {
-        public const string ColumnStoreCodeGenNamespace = "ColumnStoreCodeGen";
+        public const string CodeGenNamespace = "ColumnStoreCodeGen";
     }
 }

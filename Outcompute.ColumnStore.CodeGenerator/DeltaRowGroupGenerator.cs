@@ -10,22 +10,25 @@ internal static class DeltaRowGroupGenerator
 {
     public static SourceResult Generate(Compilation compilation, ColumnStoreTypeDescription type, LibraryTypes library)
     {
-        var generatedTypeName = $"{type.Symbol.Name}{library.DeltaRowGroup1.Name}";
+        var modelNamespace = type.Symbol.ContainingNamespace.ToDisplayString();
+        var modelTypeName = type.Symbol.ToDisplayString();
+        var modelTitle = modelTypeName.Substring(modelNamespace.Length);
+        var typeName = $"{modelTitle.Replace(".", "")}{library.DeltaRowGroup1.Name}";
 
         var code = $@"
 
-            namespace {type.GeneratedNamespace}
+            namespace {type.Symbol.ContainingNamespace}.{Constants.CodeGenNamespace}
             {{
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [{library.GenerateSerializerAttribute}]
                 [{library.UseActivatorAttribute}]
-                internal class {generatedTypeName}: {library.DeltaRowGroup1.Construct(type.Symbol)}
+                internal class {typeName}: {library.DeltaRowGroup1.Construct(type.Symbol)}
                 {{
                     {type.Properties.Render(p => $"private readonly {library.HashSet.Construct(p.Type)} _{p.Name}Set = new();")}
 
                     {type.Properties.Render(p => $"private readonly {library.ColumnSegmentStatsBuilder} _{p.Name}Stats = {library.ColumnSegmentStats}.CreateBuilder();")}
 
-                    public {generatedTypeName}(
+                    public {typeName}(
                         {library.Int32} id,
                         {library.Int32} capacity,
                         {library.Serializer1.Construct(type.Symbol)} serializer,
@@ -58,35 +61,35 @@ internal static class DeltaRowGroupGenerator
 
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [{library.RegisterDeltaRowFactoryAttribute}(typeof({type.Symbol}))]
-                internal class {generatedTypeName}Factory: {library.DeltaRowGroupFactory1.Construct(type.Symbol)}
+                internal class {typeName}Factory: {library.DeltaRowGroupFactory1.Construct(type.Symbol)}
                 {{
                     private readonly {library.ObjectFactory} _factory;
 
-                    public {generatedTypeName}Factory({library.IServiceProvider} serviceProvider): base(serviceProvider)
+                    public {typeName}Factory({library.IServiceProvider} serviceProvider): base(serviceProvider)
                     {{
-                        _factory = {library.ActivatorUtilities}.CreateFactory(typeof({generatedTypeName}), new[] {{ typeof({library.Int32}), typeof({library.Int32})}});
+                        _factory = {library.ActivatorUtilities}.CreateFactory(typeof({typeName}), new[] {{ typeof({library.Int32}), typeof({library.Int32})}});
                     }}
 
-                    public override {generatedTypeName} Create({library.Int32} id, {library.Int32} capacity)
+                    public override {typeName} Create({library.Int32} id, {library.Int32} capacity)
                     {{
-                        return ({generatedTypeName}) _factory.Invoke(ServiceProvider, new object[] {{ id, capacity }});
+                        return ({typeName}) _factory.Invoke(ServiceProvider, new object[] {{ id, capacity }});
                     }}
                 }}
 
                 [{library.GeneratedCodeAttribute}(""{nameof(DeltaRowGroupGenerator)}"", ""{Assembly.GetExecutingAssembly().GetName().Version}"")]
                 [{library.RegisterActivatorAttribute}]
-                internal class {generatedTypeName}Activator:
-                    {library.IActivator1.ToDisplayString().Replace("<T>", $"<{generatedTypeName}>")},
+                internal class {typeName}Activator:
+                    {library.IActivator1.ToDisplayString().Replace("<T>", $"<{typeName}>")},
                     {library.IActivator1.ToDisplayString().Replace("<T>", $"<{library.DeltaRowGroup1.Construct(type.Symbol)}>")}
                 {{
-                    private readonly {generatedTypeName}Factory _factory;
+                    private readonly {typeName}Factory _factory;
 
-                    public {generatedTypeName}Activator({generatedTypeName}Factory factory)
+                    public {typeName}Activator({typeName}Factory factory)
                     {{
                         _factory = factory;
                     }}
 
-                    public {generatedTypeName} Create()
+                    public {typeName} Create()
                     {{
                         return _factory.Create(0, 0);
                     }}
@@ -98,7 +101,7 @@ internal static class DeltaRowGroupGenerator
 
         var tree = CSharpSyntaxTree.ParseText(code);
         var text = SourceText.From(tree.GetRoot().NormalizeWhitespace().ToFullString(), Encoding.UTF8);
-        var name = $"{compilation.AssemblyName}.{Constants.ColumnStoreCodeGenNamespace}.{generatedTypeName}.g.cs";
+        var name = $"{compilation.AssemblyName}.{Constants.CodeGenNamespace}.{typeName}.g.cs";
 
         return new SourceResult(tree, text, name);
     }

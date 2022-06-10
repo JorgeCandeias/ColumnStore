@@ -16,7 +16,7 @@ internal class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
     internal ColumnStore(IOptions<ColumnStoreOptions> options, IDeltaStoreFactory<TRow> deltaStoreFactory)
     {
         _options = options.Value;
-        _delta = deltaStoreFactory.Create(options.Value);
+        _delta = deltaStoreFactory.Create(options.Value.RowGroupSizeThreshold);
     }
 
     public int Count { get; private set; }

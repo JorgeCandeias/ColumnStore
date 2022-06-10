@@ -3,21 +3,20 @@
 namespace Outcompute.ColumnStore;
 
 // todo: configure serialization
-// todo: this needs a factory
 internal class DeltaStore<TRow> : IDeltaStore<TRow>
 {
-    private readonly IDeltaRowGroupFactory<TRow> _deltaRowGroupFactory;
-    private readonly ColumnStoreOptions _options;
+    private readonly DeltaRowGroupFactory<TRow> _deltaRowGroupFactory;
+    private readonly int _rowGroupCapacity;
 
-    public DeltaStore(ColumnStoreOptions options, IDeltaRowGroupFactory<TRow> deltaRowGroupFactory)
+    public DeltaStore(int rowGroupCapacity, DeltaRowGroupFactory<TRow> deltaRowGroupFactory)
     {
-        Guard.IsNotNull(options, nameof(options));
+        Guard.IsGreaterThanOrEqualTo(rowGroupCapacity, 0, nameof(rowGroupCapacity));
         Guard.IsNotNull(deltaRowGroupFactory, nameof(deltaRowGroupFactory));
 
-        _options = options;
+        _rowGroupCapacity = rowGroupCapacity;
         _deltaRowGroupFactory = deltaRowGroupFactory;
 
-        _active = _deltaRowGroupFactory.Create(_ids++, _options.RowGroupSizeThreshold);
+        _active = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
         _groups.Add(_active);
     }
 
@@ -35,7 +34,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         if (_active.State == RowGroupState.Closed)
         {
-            _active = _deltaRowGroupFactory.Create(_ids++, _options.RowGroupSizeThreshold);
+            _active = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
             _groups.Add(_active);
         }
 
@@ -50,7 +49,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         if (_active.State == RowGroupState.Closed)
         {
-            _active = _deltaRowGroupFactory.Create(_ids++, _options.RowGroupSizeThreshold);
+            _active = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
             _groups.Add(_active);
         }
 

@@ -2,5 +2,5 @@
 
 public interface IDeltaStoreFactory<TRow>
 {
-    IDeltaStore<TRow> Create(ColumnStoreOptions options);
+    IDeltaStore<TRow> Create(int rowGroupCapacity);
 }

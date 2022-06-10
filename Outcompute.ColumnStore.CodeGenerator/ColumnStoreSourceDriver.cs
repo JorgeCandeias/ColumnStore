@@ -31,8 +31,9 @@ internal static class ColumnStoreSourceDriver
             // generate code for this model
             unit = unit
                 //.AddMembers(DeltaRowGroupGenerator.Generate(descriptor, library))
-                .AddMembers(SolidRowGroupGenerator.Generate(descriptor, library))
-                .AddMembers(SolidRowGroupFactoryGenerator.Generate(descriptor, library));
+                //.AddMembers(SolidRowGroupGenerator.Generate(descriptor, library))
+                //.AddMembers(SolidRowGroupFactoryGenerator.Generate(descriptor, library));
+                ;
         }
 
         return unit;

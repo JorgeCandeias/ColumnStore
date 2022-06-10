@@ -2,17 +2,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 using Orleans.Serialization;
 using System.Buffers;
-using TestDeltaRowGroup = Outcompute.ColumnStore.Tests.ColumnStoreCodeGen.DeltaRowGroupTestsTestModelDeltaRowGroup;
+using TestDeltaRowGroup = Outcompute.ColumnStore.Tests.ColumnStoreCodeGen.DeltaStoreTestsTestModelDeltaRowGroup;
 
 namespace Outcompute.ColumnStore.Tests;
 
-public class DeltaRowGroupTests
+public class DeltaStoreTests
 {
     public const string CodeGenNamespace = "ColumnStoreCodeGen";
 
     private readonly IServiceProvider _provider;
 
-    public DeltaRowGroupTests()
+    public DeltaStoreTests()
     {
         _provider = new ServiceCollection()
             .AddSerializer()

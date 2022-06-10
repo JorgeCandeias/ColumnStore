@@ -15,8 +15,8 @@ internal class DeltaStoreFactory<TRow> : IDeltaStoreFactory<TRow>
         _factory = ActivatorUtilities.CreateFactory(typeof(DeltaStore<TRow>), new[] { typeof(ColumnStoreOptions) });
     }
 
-    public IDeltaStore<TRow> Create(ColumnStoreOptions options)
+    public IDeltaStore<TRow> Create(int rowGroupCapacity)
     {
-        return (IDeltaStore<TRow>)_factory.Invoke(_provider, new object[] { options });
+        return (IDeltaStore<TRow>)_factory.Invoke(_provider, new object[] { rowGroupCapacity });
     }
 }
