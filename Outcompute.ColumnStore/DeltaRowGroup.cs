@@ -54,7 +54,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     /// Version used to invalidate enumerators.
     /// </summary>
     [Id(7)]
-    private int _version;
+    public int Version { get; private set; }
 
     public RowGroupStats Stats => _stats ??= BuildStats();
 
@@ -68,7 +68,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         _stats = null;
         unchecked
         {
-            _version++;
+            Version++;
         }
     }
 
@@ -175,26 +175,21 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
 
     public IEnumerator<TRow> GetEnumerator()
     {
-        var version = _version;
+        var version = Version;
 
         using var session = _sessions.GetSession();
         var sequence = _data.GetReadOnlySequence();
 
-        var position = 0L;
-        var length = sequence.Length;
-
-        while (position < length)
+        while (sequence.Length > 0)
         {
-            if (version != _version)
+            if (version != Version)
             {
                 ThrowHelper.ThrowInvalidOperationException($"This {GetType().Name} has changed since the enumeration started");
             }
 
-            // create a new reader per loop as ref structs cannot be used after yielding
             var reader = Reader.Create(sequence, session);
-            reader.Skip(position);
             var result = _serializer.Deserialize(ref reader);
-            position = reader.Position;
+            sequence = sequence.Slice(reader.Position);
 
             yield return result;
         }
