@@ -18,7 +18,7 @@ public class RowGroupStats : IRowGroupStats
     public int RowCount { get; init; }
 
     [Id(3)]
-    public IReadOnlyDictionary<string, IColumnSegmentStats> ColumnSegmentStats { get; init; } = null!;
+    public IReadOnlyDictionary<string, ColumnSegmentStats> ColumnSegmentStats { get; init; } = null!;
 
     public class Builder
     {
@@ -30,7 +30,7 @@ public class RowGroupStats : IRowGroupStats
 
         public int RowCount { get; set; }
 
-        public ImmutableDictionary<string, IColumnSegmentStats>.Builder ColumnSegmentStats { get; } = ImmutableDictionary.CreateBuilder<string, IColumnSegmentStats>();
+        public ImmutableDictionary<string, ColumnSegmentStats>.Builder ColumnSegmentStats { get; } = ImmutableDictionary.CreateBuilder<string, ColumnSegmentStats>();
 
         public RowGroupStats ToImmutable() => new()
         {
@@ -61,6 +61,6 @@ public class RowGroupStats : IRowGroupStats
     {
         Id = 0,
         RowCount = 0,
-        ColumnSegmentStats = ImmutableDictionary<string, IColumnSegmentStats>.Empty
+        ColumnSegmentStats = ImmutableDictionary<string, ColumnSegmentStats>.Empty
     };
 }
