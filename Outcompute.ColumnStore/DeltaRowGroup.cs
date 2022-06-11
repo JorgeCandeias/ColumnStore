@@ -31,13 +31,6 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
         _sessions = sessions;
     }
 
-    /// <summary>
-    /// Version used to invalidate enumerators.
-    /// </summary>
-    private int _version;
-
-    #region State
-
     [Id(1)]
     public int Id { get; }
 
@@ -57,6 +50,12 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     [Id(6)]
     public int Count { get; private set; }
 
+    /// <summary>
+    /// Version used to invalidate enumerators.
+    /// </summary>
+    [Id(7)]
+    private int _version;
+
     public RowGroupStats Stats => _stats ??= BuildStats();
 
     /// <summary>
@@ -64,12 +63,13 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     /// </summary>
     public ReadOnlySequence<byte> GetReadOnlySequence() => _data.GetReadOnlySequence();
 
-    #endregion State
-
     private void Invalidate()
     {
         _stats = null;
-        _version++;
+        unchecked
+        {
+            _version++;
+        }
     }
 
     /// <summary>
