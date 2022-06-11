@@ -210,7 +210,7 @@ public class DeltaRowGroupTests
     public void RoundtripsViaAbstractSerializer()
     {
         // arrange
-        var inputSerializer = _provider.GetRequiredService<Serializer<TestDeltaRowGroup>>();
+        var inputSerializer = _provider.GetRequiredService<Serializer<DeltaRowGroup<TestModel>>>();
         var input = Create(123, 1000, _data);
         var outputSerializer = _provider.GetRequiredService<Serializer<DeltaRowGroup<TestModel>>>();
 
@@ -245,7 +245,6 @@ public class DeltaRowGroupTests
         Assert.True(input.GetReadOnlySequence().ToArray().SequenceEqual(output.GetReadOnlySequence().ToArray()));
     }
 
-    [Id(1001)]
     [GenerateSerializer, ColumnStore]
     public record struct TestModel(
         [property: Id(1), ColumnStoreProperty] int Prop1,

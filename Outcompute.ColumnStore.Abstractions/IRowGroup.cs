@@ -9,5 +9,5 @@ public interface IRowGroup<out TRow> : IReadOnlyCollection<TRow>
 
     RowGroupState State { get; }
 
-    IRowGroupStats Stats { get; }
+    RowGroupStats Stats { get; }
 }

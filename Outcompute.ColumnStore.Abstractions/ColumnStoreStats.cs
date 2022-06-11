@@ -4,16 +4,16 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-public class ColumnStoreStats : IColumnStoreStats
+public class ColumnStoreStats
 {
     [Id(1)]
     public int RowCount { get; init; }
 
     [Id(2)]
-    public IInnerStoreStats DeltaStoreStats { get; init; } = InnerStoreStats.Empty;
+    public InnerStoreStats DeltaStoreStats { get; init; } = InnerStoreStats.Empty;
 
     [Id(3)]
-    public IInnerStoreStats SolidStoreStats { get; init; } = InnerStoreStats.Empty;
+    public InnerStoreStats SolidStoreStats { get; init; } = InnerStoreStats.Empty;
 
     public class Builder
     {

@@ -25,7 +25,7 @@ internal class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 
     private void ClearStats() => _stats = null;
 
-    public IColumnStoreStats Stats => _stats ??= BuildStats();
+    public ColumnStoreStats Stats => _stats ??= BuildStats();
 
     private ColumnStoreStats BuildStats()
     {

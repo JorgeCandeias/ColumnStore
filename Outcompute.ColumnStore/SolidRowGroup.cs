@@ -6,7 +6,7 @@ namespace Outcompute.ColumnStore;
 [GenerateSerializer]
 public abstract class SolidRowGroup<TRow> : ISolidRowGroup<TRow>
 {
-    protected SolidRowGroup(int id, IRowGroupStats stats)
+    protected SolidRowGroup(int id, RowGroupStats stats)
     {
         Guard.IsNotNull(stats, nameof(stats));
 
@@ -21,7 +21,7 @@ public abstract class SolidRowGroup<TRow> : ISolidRowGroup<TRow>
     public RowGroupState State => RowGroupState.Solid;
 
     [Id(3)]
-    public IRowGroupStats Stats { get; }
+    public RowGroupStats Stats { get; }
 
     public int Count => Stats.RowCount;
 

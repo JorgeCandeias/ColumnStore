@@ -64,7 +64,7 @@ internal static class DeltaRowGroupGenerator
                     internal class SetsHolder
                     {{
                         {model.Properties.Render((p, i) => @$"
-                        [{library.IdAttribute}({model.Ids[i]})]
+                        [{library.IdAttribute}({model.PropertyIds[i]})]
                         public {library.HashSet.Construct(p.Type)} {p.Name}Set = new();")}
                     }}
 
@@ -72,7 +72,7 @@ internal static class DeltaRowGroupGenerator
                     internal class StatsHolder
                     {{
                         {model.Properties.Render((p, i) => @$"
-                        [{library.IdAttribute}({model.Ids[i]})]
+                        [{library.IdAttribute}({model.PropertyIds[i]})]
                         public {library.ColumnSegmentStatsBuilder} {p.Name}Stats = {library.ColumnSegmentStats}.CreateBuilder();")}
                     }}
                 }}

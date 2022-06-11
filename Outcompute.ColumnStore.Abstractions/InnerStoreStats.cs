@@ -5,13 +5,13 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-public class InnerStoreStats : IInnerStoreStats
+public class InnerStoreStats
 {
     [Id(1)]
     public int RowCount { get; init; }
 
     [Id(2)]
-    public IReadOnlyDictionary<int, IRowGroupStats> RowGroupStats { get; init; } = ImmutableDictionary<int, IRowGroupStats>.Empty;
+    public IReadOnlyDictionary<int, RowGroupStats> RowGroupStats { get; init; } = ImmutableDictionary<int, RowGroupStats>.Empty;
 
     public class Builder
     {
@@ -21,7 +21,7 @@ public class InnerStoreStats : IInnerStoreStats
 
         public int RowCount { get; set; }
 
-        public ImmutableDictionary<int, IRowGroupStats>.Builder RowGroupStats { get; } = ImmutableDictionary.CreateBuilder<int, IRowGroupStats>();
+        public ImmutableDictionary<int, RowGroupStats>.Builder RowGroupStats { get; } = ImmutableDictionary.CreateBuilder<int, RowGroupStats>();
 
         public InnerStoreStats ToImmutable() => new()
         {
@@ -35,6 +35,6 @@ public class InnerStoreStats : IInnerStoreStats
     public static InnerStoreStats Empty { get; } = new()
     {
         RowCount = 0,
-        RowGroupStats = ImmutableDictionary<int, IRowGroupStats>.Empty
+        RowGroupStats = ImmutableDictionary<int, RowGroupStats>.Empty
     };
 }

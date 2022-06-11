@@ -57,7 +57,7 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     [Id(6)]
     public int Count { get; private set; }
 
-    public IRowGroupStats Stats => _stats ??= BuildStats();
+    public RowGroupStats Stats => _stats ??= BuildStats();
 
     /// <summary>
     /// Gets the underlying serialized data.

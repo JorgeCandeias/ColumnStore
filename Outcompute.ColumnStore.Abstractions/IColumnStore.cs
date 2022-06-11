@@ -30,5 +30,5 @@ public interface IColumnStore<TRow> : IReadOnlyCollection<TRow>
     /// <summary>
     /// Statistics about the columnstore data and layout.
     /// </summary>
-    IColumnStoreStats Stats { get; }
+    ColumnStoreStats Stats { get; }
 }

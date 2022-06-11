@@ -10,5 +10,5 @@ internal class Model
 
     public IList<IPropertySymbol> Properties { get; } = new List<IPropertySymbol>();
 
-    public IList<ushort> Ids { get; } = new List<ushort>();
+    public IList<ushort> PropertyIds { get; } = new List<ushort>();
 }

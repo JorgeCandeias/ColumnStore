@@ -33,6 +33,16 @@ namespace Outcompute.ColumnStore.CodeGenerator
                     Symbol = item,
                 };
 
+                /*
+                // take the symbol id
+                var idAttribute = item.GetAttributes().SingleOrDefault(x => x.AttributeClass?.Equals(library.IdAttribute, SymbolEqualityComparer.Default) ?? false);
+                if (idAttribute is null)
+                {
+                    throw new InvalidOperationException($"Model '{item}' with attribute '{library.ColumnStoreAttribute}' must also have attribute '{library.IdAttribute}'");
+                }
+                descriptor.SymbolId = (ushort)idAttribute.ConstructorArguments[0].Value!;
+                */
+
                 // add properties
                 foreach (var property in item.GetMembers().OfType<IPropertySymbol>())
                 {
@@ -40,7 +50,7 @@ namespace Outcompute.ColumnStore.CodeGenerator
                     if (idAttribute is not null)
                     {
                         descriptor.Properties.Add(property);
-                        descriptor.Ids.Add((ushort)idAttribute.ConstructorArguments[0].Value!);
+                        descriptor.PropertyIds.Add((ushort)idAttribute.ConstructorArguments[0].Value!);
                     }
                 }
 
