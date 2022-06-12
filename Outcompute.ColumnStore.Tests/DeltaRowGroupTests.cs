@@ -56,6 +56,7 @@ public class DeltaRowGroupTests
         Assert.Equal(RowGroupState.Open, group.State);
         Assert.Equal(capacity, group.Capacity);
         Assert.Equal(0, group.Version);
+        Assert.Equal(0, group.GetReadOnlySequence().Length);
         Assert.Empty(group);
 
         // assert empty stats
@@ -104,6 +105,7 @@ public class DeltaRowGroupTests
         Assert.Equal(RowGroupState.Open, group.State);
         Assert.Equal(6, group.Version);
         Assert.Equal(6, group.Count);
+        Assert.NotEqual(0, group.GetReadOnlySequence().Length);
 
         // assert content
         foreach (var item in group.Select((Model, Index) => (Model, Index)))
@@ -145,6 +147,7 @@ public class DeltaRowGroupTests
         Assert.Equal(RowGroupState.Open, group.State);
         Assert.Equal(1, group.Version);
         Assert.Equal(6, group.Count);
+        Assert.NotEqual(0, group.GetReadOnlySequence().Length);
 
         // assert content
         foreach (var item in group.Select((Model, Index) => (Model, Index)))
