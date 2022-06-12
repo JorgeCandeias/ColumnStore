@@ -5,7 +5,7 @@ namespace Outcompute.ColumnStore;
 
 [Immutable]
 [GenerateSerializer]
-public class RowGroupStats
+public sealed class RowGroupStats
 {
     private RowGroupStats()
     {

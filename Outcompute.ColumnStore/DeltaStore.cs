@@ -14,12 +14,12 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
         Guard.IsGreaterThanOrEqualTo(rowGroupCapacity, 0, nameof(rowGroupCapacity));
         Guard.IsNotNull(deltaRowGroupFactory, nameof(deltaRowGroupFactory));
 
-        _rowGroupCapacity = rowGroupCapacity;
+        RowGroupCapacity = rowGroupCapacity;
         _deltaRowGroupFactory = deltaRowGroupFactory;
     }
 
     [Id(1)]
-    private readonly int _rowGroupCapacity;
+    public int RowGroupCapacity { get; }
 
     [Id(2)]
     private int _ids;
@@ -43,9 +43,11 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
     {
         var added = GetOrAddRowGroup().AddRange(rows);
 
-        Count += added;
-
-        Invalidate();
+        if (added > 0)
+        {
+            Count += added;
+            Invalidate();
+        }
 
         return added;
     }
@@ -92,7 +94,7 @@ internal class DeltaStore<TRow> : IDeltaStore<TRow>
             }
         }
 
-        var created = _deltaRowGroupFactory.Create(_ids++, _rowGroupCapacity);
+        var created = _deltaRowGroupFactory.Create(_ids++, RowGroupCapacity);
         _groups.Add(created);
         return created;
     }

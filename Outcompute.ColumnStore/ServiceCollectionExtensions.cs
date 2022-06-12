@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
             .AddOptions()
             .AddGeneratedFactories()
             .AddSingleton(typeof(IColumnStoreFactory<>), typeof(ColumnStoreFactory<>))
-            .AddSingleton(typeof(IDeltaStoreFactory<>), typeof(DeltaStoreFactory<>))
+            .AddSingleton(typeof(DeltaStoreFactory<>))
             .AddSingleton(typeof(IColumnSegmentBuilderFactory<>), typeof(ColumnSegmentBuilderFactory<>))
             .AddTransient(typeof(ColumnSegmentBuilder<>));
     }

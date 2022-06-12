@@ -8,8 +8,6 @@ namespace Outcompute.ColumnStore.Tests;
 
 public class DeltaRowGroupTests
 {
-    public const string CodeGenNamespace = "ColumnStoreCodeGen";
-
     private readonly IServiceProvider _provider;
 
     public DeltaRowGroupTests()
@@ -23,7 +21,7 @@ public class DeltaRowGroupTests
     private TestDeltaRowGroup Create(int id, int capacity, params TestModel[] data)
     {
         var group = (TestDeltaRowGroup)_provider
-            .GetRequiredService<IDeltaRowGroupFactory<TestModel>>()
+            .GetRequiredService<DeltaRowGroupFactory<TestModel>>()
             .Create(id, capacity);
 
         group.AddRange(data);
