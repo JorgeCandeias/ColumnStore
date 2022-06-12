@@ -159,8 +159,11 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
             added++;
         }
 
-        TryClose();
-        Invalidate();
+        if (added > 0)
+        {
+            TryClose();
+            Invalidate();
+        }
 
         return added;
     }

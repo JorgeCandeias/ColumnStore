@@ -4,6 +4,7 @@ using System.Collections;
 namespace Outcompute.ColumnStore;
 
 [GenerateSerializer]
+[UseActivator]
 internal class DeltaStore<TRow> : IDeltaStore<TRow>
 {
     private readonly DeltaRowGroupFactory<TRow> _deltaRowGroupFactory;

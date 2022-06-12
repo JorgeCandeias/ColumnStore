@@ -46,13 +46,16 @@ public class DeltaRowGroupTests
     {
         // arrange
         var id = 123;
+        var capacity = 1000;
 
         //act
-        var group = Create(id, 1000);
+        var group = Create(id, capacity);
 
         // assert empty state
         Assert.Equal(id, group.Id);
         Assert.Equal(RowGroupState.Open, group.State);
+        Assert.Equal(capacity, group.Capacity);
+        Assert.Equal(0, group.Version);
         Assert.Empty(group);
 
         // assert empty stats
@@ -89,83 +92,85 @@ public class DeltaRowGroupTests
     public void AddsOne()
     {
         // arrange
-        var rows = Create(123, 1000);
+        var group = Create(123, 1000);
 
         // act
         foreach (var item in _data)
         {
-            rows.Add(item);
+            group.Add(item);
         }
 
         // assert properties
-        Assert.Equal(RowGroupState.Open, rows.State);
-        Assert.Equal(6, rows.Count);
+        Assert.Equal(RowGroupState.Open, group.State);
+        Assert.Equal(6, group.Version);
+        Assert.Equal(6, group.Count);
 
         // assert content
-        foreach (var item in rows.Select((Model, Index) => (Model, Index)))
+        foreach (var item in group.Select((Model, Index) => (Model, Index)))
         {
             Assert.Equal(_data[item.Index] with { Ignored = false }, item.Model);
         }
 
         // assert stats
-        Assert.Equal(6, rows.Stats.RowCount);
-        Assert.Equal(5, rows.Stats.ColumnSegmentStats.Count);
+        Assert.Equal(6, group.Stats.RowCount);
+        Assert.Equal(5, group.Stats.ColumnSegmentStats.Count);
 
         // assert property stats
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
-        Assert.Equal(6, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
+        Assert.Equal(6, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
 
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
-        Assert.Equal(2, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
+        Assert.Equal(2, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
 
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
 
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
-        Assert.Equal(4, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
+        Assert.Equal(4, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
 
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
     }
 
     [Fact]
     public void AddsMany()
     {
         // arrange
-        var rows = Create(123, 1000);
+        var group = Create(123, 1000);
 
         // act
-        rows.AddRange(_data);
+        group.AddRange(_data);
 
         // assert properties
-        Assert.Equal(RowGroupState.Open, rows.State);
-        Assert.Equal(6, rows.Count);
+        Assert.Equal(RowGroupState.Open, group.State);
+        Assert.Equal(1, group.Version);
+        Assert.Equal(6, group.Count);
 
         // assert content
-        foreach (var item in rows.Select((Model, Index) => (Model, Index)))
+        foreach (var item in group.Select((Model, Index) => (Model, Index)))
         {
             Assert.Equal(_data[item.Index] with { Ignored = false }, item.Model);
         }
 
         // assert stats
-        Assert.Equal(6, rows.Stats.RowCount);
-        Assert.Equal(5, rows.Stats.ColumnSegmentStats.Count);
+        Assert.Equal(6, group.Stats.RowCount);
+        Assert.Equal(5, group.Stats.ColumnSegmentStats.Count);
 
         // assert property stats
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
-        Assert.Equal(6, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
+        Assert.Equal(6, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
 
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
-        Assert.Equal(2, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
+        Assert.Equal(2, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
 
-        Assert.Equal(0, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
+        Assert.Equal(0, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
 
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
-        Assert.Equal(4, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
+        Assert.Equal(4, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
 
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
-        Assert.Equal(3, rows.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
+        Assert.Equal(3, group.Stats.ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
     }
 
     [Fact]
@@ -189,6 +194,7 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.Count, output.Count);
+        Assert.Equal(input.Version, output.Version);
 
         Assert.Equal(input.Stats.Id, output.Stats.Id);
         Assert.Equal(input.Stats.RowCount, output.Stats.RowCount);
@@ -228,6 +234,7 @@ public class DeltaRowGroupTests
         Assert.Equal(input.Capacity, output.Capacity);
         Assert.Equal(input.State, output.State);
         Assert.Equal(input.Count, output.Count);
+        Assert.Equal(input.Version, output.Version);
 
         Assert.Equal(input.Stats.Id, output.Stats.Id);
         Assert.Equal(input.Stats.RowCount, output.Stats.RowCount);
