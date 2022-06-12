@@ -177,6 +177,8 @@ public class DeltaStoreTests
                 Assert.Equal(col.DistinctValueCount, otherCol.DistinctValueCount);
             }
         }
+
+        Assert.True(input.SequenceEqual(output));
     }
 
     [Id(1001)]
