@@ -7,7 +7,7 @@ namespace Outcompute.ColumnStore;
 /// <summary>
 /// A generic column segment that supports any type.
 /// </summary>
-internal class ColumnSegment<TValue> : IColumnSegment<TValue>
+internal class ColumnSegment<TValue> : IEnumerable<TValue>
 {
     private readonly byte[] _data;
     private readonly ColumnSegmentStats _stats;

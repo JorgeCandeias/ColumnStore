@@ -1,11 +1,10 @@
 ﻿using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
-using static System.String;
 
 namespace Outcompute.ColumnStore;
 
-internal class ColumnSegmentBuilder<TValue> : IColumnSegmentBuilder<TValue>
+internal class ColumnSegmentBuilder<TValue>
 {
     private readonly IComparer<TValue> _comparer;
     private readonly Dictionary<KeyWrapper, List<Range>> _groups;
@@ -115,7 +114,7 @@ internal class ColumnSegmentBuilder<TValue> : IColumnSegmentBuilder<TValue>
 
     public string Name { get; set; } = Empty;
 
-    public IColumnSegment<TValue> ToImmutable()
+    public ColumnSegment<TValue> ToImmutable()
     {
         using var stream = new MemoryStream();
         using var session = _sessions.GetSession();

@@ -2,7 +2,7 @@
 
 namespace Outcompute.ColumnStore;
 
-internal class ColumnSegmentBuilderFactory<TValue> : IColumnSegmentBuilderFactory<TValue>
+internal class ColumnSegmentBuilderFactory<TValue>
 {
     private readonly IServiceProvider _provider;
     private readonly ObjectFactory _factory;
@@ -13,10 +13,10 @@ internal class ColumnSegmentBuilderFactory<TValue> : IColumnSegmentBuilderFactor
         _factory = ActivatorUtilities.CreateFactory(typeof(ColumnSegmentBuilder<TValue>), new[] { typeof(IComparer<TValue>) });
     }
 
-    public IColumnSegmentBuilder<TValue> Create(IComparer<TValue> comparer)
+    public ColumnSegmentBuilder<TValue> Create(IComparer<TValue> comparer)
     {
         Guard.IsNotNull(comparer, nameof(comparer));
 
-        return (IColumnSegmentBuilder<TValue>)_factory(_provider, new object[] { comparer });
+        return (ColumnSegmentBuilder<TValue>)_factory(_provider, new object[] { comparer });
     }
 }
