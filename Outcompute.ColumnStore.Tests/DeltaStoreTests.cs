@@ -139,6 +139,54 @@ public class DeltaStoreTests
     }
 
     [Fact]
+    public void Closes()
+    {
+        // arrange
+        var store = Create(1000);
+        var extra = new TestModel { Prop1 = 1, Prop2 = "A", Prop3 = 1.1M, Prop4 = 1.1, Prop5 = "A", Ignored = true };
+
+        // act
+        store.AddRange(_data);
+        store.Close();
+        store.Add(extra);
+
+        // assert properties
+        Assert.Equal(7, store.Count);
+
+        // assert content
+        Assert.All(store.Zip(_data.Append(extra)), x => Assert.Equal(x.First, x.Second with { Ignored = false }));
+
+        // assert stats
+        Assert.Equal(7, store.Stats.RowCount);
+        Assert.Equal(2, store.Stats.RowGroupStats.Count);
+        Assert.Equal(5, store.Stats.RowGroupStats[0].ColumnSegmentStats.Count);
+
+        // assert first row group stats
+        Assert.Equal(0, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
+        Assert.Equal(6, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
+        Assert.Equal(0, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
+        Assert.Equal(2, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
+        Assert.Equal(0, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
+        Assert.Equal(3, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
+        Assert.Equal(3, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
+        Assert.Equal(4, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
+        Assert.Equal(3, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
+        Assert.Equal(3, store.Stats.RowGroupStats[0].ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
+
+        // assert second rowgroup stats
+        Assert.Equal(0, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop1)].DefaultValueCount);
+        Assert.Equal(1, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop1)].DistinctValueCount);
+        Assert.Equal(0, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop2)].DefaultValueCount);
+        Assert.Equal(1, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop2)].DistinctValueCount);
+        Assert.Equal(0, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop3)].DefaultValueCount);
+        Assert.Equal(1, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop3)].DistinctValueCount);
+        Assert.Equal(0, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop4)].DefaultValueCount);
+        Assert.Equal(1, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop4)].DistinctValueCount);
+        Assert.Equal(0, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop5)].DefaultValueCount);
+        Assert.Equal(1, store.Stats.RowGroupStats[1].ColumnSegmentStats[nameof(TestModel.Prop5)].DistinctValueCount);
+    }
+
+    [Fact]
     public void RoundtripsViaConcreteSerializer()
     {
         // arrange
