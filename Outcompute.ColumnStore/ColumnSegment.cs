@@ -1,4 +1,6 @@
-﻿using Orleans.Serialization;
+﻿using Microsoft.IO;
+using Orleans.Serialization;
+using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
 using System.Collections;
 
@@ -7,15 +9,15 @@ namespace Outcompute.ColumnStore;
 /// <summary>
 /// A generic column segment that supports any type.
 /// </summary>
-internal class ColumnSegment<TValue> : IEnumerable<TValue>
+internal sealed class ColumnSegment<TValue> : IEnumerable<TValue>, IDisposable
 {
-    private readonly byte[] _data;
+    private readonly RecyclableMemoryStream _data;
     private readonly ColumnSegmentStats _stats;
     private readonly Serializer<ColumnSegmentHeader<TValue>> _headerSerializer;
     private readonly Serializer<ColumnSegmentRange> _rangeSerializer;
     private readonly SerializerSessionPool _sessions;
 
-    public ColumnSegment(byte[] data, ColumnSegmentStats stats, Serializer<ColumnSegmentHeader<TValue>> headerSerializer, Serializer<ColumnSegmentRange> rangeSerializer, SerializerSessionPool sessions)
+    public ColumnSegment(RecyclableMemoryStream data, ColumnSegmentStats stats, Serializer<ColumnSegmentHeader<TValue>> headerSerializer, Serializer<ColumnSegmentRange> rangeSerializer, SerializerSessionPool sessions)
     {
         _data = data;
         _stats = stats;
@@ -33,14 +35,21 @@ internal class ColumnSegment<TValue> : IEnumerable<TValue>
     public IEnumerator<TValue> GetEnumerator()
     {
         using var session = _sessions.GetSession();
-        using var stream = new MemoryStream(_data);
 
-        while (stream.Position < stream.Length)
+        var sequence = _data.GetReadOnlySequence();
+
+        while (sequence.Length > 0)
         {
-            var header = _headerSerializer.Deserialize(stream);
+            var reader = Reader.Create(sequence, session);
+            var header = _headerSerializer.Deserialize(ref reader);
+            sequence.Slice(reader.Position);
+
             for (var i = 0; i < header.RangeCount; i++)
             {
-                var range = _rangeSerializer.Deserialize(stream);
+                reader = Reader.Create(sequence, session);
+                var range = _rangeSerializer.Deserialize(ref reader);
+                sequence = sequence.Slice(reader.Position);
+
                 for (var j = range.Start; j <= range.End; j++)
                 {
                     yield return header.Value;
@@ -50,4 +59,24 @@ internal class ColumnSegment<TValue> : IEnumerable<TValue>
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    #region Disposable
+
+    private void DisposeCore()
+    {
+        _data.Dispose();
+    }
+
+    public void Dispose()
+    {
+        DisposeCore();
+        GC.SuppressFinalize(this);
+    }
+
+    ~ColumnSegment()
+    {
+        DisposeCore();
+    }
+
+    #endregion Disposable
 }

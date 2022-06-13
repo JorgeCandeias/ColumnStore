@@ -116,7 +116,7 @@ internal class ColumnSegmentBuilder<TValue>
 
     public ColumnSegment<TValue> ToImmutable()
     {
-        using var stream = new MemoryStream();
+        var stream = ColumnStoreMemoryStreamManager.GetStream();
         using var session = _sessions.GetSession();
         var writer = Writer.Create(stream, session);
 
@@ -130,11 +130,9 @@ internal class ColumnSegmentBuilder<TValue>
             }
         }
 
-        var data = stream.ToArray();
-
         _stats.Name = Name;
         _stats.DistinctValueCount = _groups.Count;
 
-        return new ColumnSegment<TValue>(data, _stats.ToImmutable(), _headerSerializer, _rangeSerializer, _sessions);
+        return new ColumnSegment<TValue>(stream, _stats.ToImmutable(), _headerSerializer, _rangeSerializer, _sessions);
     }
 }
