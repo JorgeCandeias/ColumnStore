@@ -30,9 +30,6 @@ public static class ServiceCollectionExtensions
                     // add the service on its own
                     services.AddSingleton(implementation);
 
-                    // add the service against the interface
-                    services.AddSingleton(typeof(IDeltaRowGroupFactory<>).MakeGenericType(attribute.ModelType), sp => sp.GetRequiredService(implementation));
-
                     // add the service against the base class
                     services.AddSingleton(typeof(DeltaRowGroupFactory<>).MakeGenericType(attribute.ModelType), sp => sp.GetRequiredService(implementation));
                 }
