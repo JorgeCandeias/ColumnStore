@@ -13,7 +13,7 @@ namespace Outcompute.ColumnStore;
 /// </summary>
 [GenerateSerializer]
 [UseActivator]
-public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
+public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>, IDisposable
 {
     private readonly Serializer<TRow> _serializer;
     private readonly SerializerSessionPool _sessions;
@@ -40,7 +40,6 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     [Id(3)]
     public RowGroupState State { get; private set; } = RowGroupState.Open;
 
-    // todo: handle disposing on the entire object graph
     [Id(4)]
     private readonly RecyclableMemoryStream _data = ColumnStoreMemoryStreamManager.GetStream();
 
@@ -199,4 +198,24 @@ public abstract class DeltaRowGroup<TRow> : IDeltaRowGroup<TRow>
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    #region Disposable
+
+    protected virtual void Dispose(bool disposing)
+    {
+        _data.Dispose();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    ~DeltaRowGroup()
+    {
+        Dispose(false);
+    }
+
+    #endregion Disposable
 }
