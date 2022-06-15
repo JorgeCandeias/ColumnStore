@@ -28,7 +28,8 @@ internal class ColumnSegmentBuilder<TValue>
     }
 
     private readonly ColumnSegmentStats.Builder _stats = ColumnSegmentStats.CreateBuilder();
-    private int _count;
+
+    public int Count { get; private set; }
 
     /// <summary>
     /// Defers key comparisons to the underlying key type being wrapped to support null dictionary keys.
@@ -62,31 +63,31 @@ internal class ColumnSegmentBuilder<TValue>
     {
         list.Add(new Range
         {
-            Start = _count,
-            End = _count
+            Start = Count,
+            End = Count
         });
 
-        _count++;
+        Count++;
     }
 
     private void Increment(List<Range> list)
     {
         var last = list[^1];
 
-        if (last.End == _count - 1)
+        if (last.End == Count - 1)
         {
-            last.End = _count;
+            last.End = Count;
         }
         else
         {
             list.Add(new Range
             {
-                Start = _count,
-                End = _count
+                Start = Count,
+                End = Count
             });
         }
 
-        _count++;
+        Count++;
     }
 
     public void Add(TValue value)
@@ -109,7 +110,7 @@ internal class ColumnSegmentBuilder<TValue>
             _stats.DefaultValueCount++;
         }
 
-        _count++;
+        Count++;
     }
 
     public string Name { get; set; } = Empty;

@@ -3,7 +3,6 @@ using System.Collections;
 
 namespace Outcompute.ColumnStore;
 
-// todo: configure serialization
 internal class ColumnStore<TRow> : IColumnStore<TRow> where TRow : new()
 {
     private readonly RowGroupConverter<TRow> _converter = new();
