@@ -52,6 +52,8 @@ internal static class DeltaRowGroupGenerator
                         {{
                             _stats.{p.Name}Stats.DefaultValueCount++;
                         }}
+
+                        _stats.{p.Name}Stats.RowCount++;
                         ")}
                     }}
 

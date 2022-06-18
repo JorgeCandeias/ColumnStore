@@ -16,6 +16,8 @@ internal sealed class ColumnSegmentStatsBuilderCodec : GeneralizedReferenceTypeS
         var builder = ColumnSegmentStats.CreateBuilder();
 
         builder.Name = surrogate.Name;
+        builder.RowCount = surrogate.RowCount;
+        builder.RangeCount = surrogate.RangeCount;
         builder.DistinctValueCount = surrogate.DistinctValueCount;
         builder.DefaultValueCount = surrogate.DefaultValueCount;
 
@@ -26,6 +28,8 @@ internal sealed class ColumnSegmentStatsBuilderCodec : GeneralizedReferenceTypeS
     {
         surrogate = new ColumnSegmentStatsSurrogate(
             value.Name,
+            value.RowCount,
+            value.RangeCount,
             value.DistinctValueCount,
             value.DefaultValueCount);
     }
@@ -34,5 +38,7 @@ internal sealed class ColumnSegmentStatsBuilderCodec : GeneralizedReferenceTypeS
 [GenerateSerializer]
 internal record struct ColumnSegmentStatsSurrogate(
     [property: Id(1)] string Name,
-    [property: Id(2)] int DistinctValueCount,
-    [property: Id(3)] int DefaultValueCount);
+    [property: Id(2)] int RowCount,
+    [property: Id(3)] int RangeCount,
+    [property: Id(4)] int DistinctValueCount,
+    [property: Id(5)] int DefaultValueCount);

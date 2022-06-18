@@ -11,6 +11,8 @@ internal sealed class ColumnSegmentStatsBuilderCopier : IDeepCopier<ColumnSegmen
         var builder = ColumnSegmentStats.CreateBuilder();
 
         builder.Name = input.Name;
+        builder.RowCount = input.RowCount;
+        builder.RangeCount = input.RangeCount;
         builder.DistinctValueCount = input.DistinctValueCount;
         builder.DefaultValueCount = input.DefaultValueCount;
 
