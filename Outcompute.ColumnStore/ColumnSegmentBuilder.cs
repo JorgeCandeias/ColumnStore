@@ -1,4 +1,5 @@
-﻿using Orleans.Serialization;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
 using System.Diagnostics.CodeAnalysis;
@@ -8,24 +9,21 @@ namespace Outcompute.ColumnStore;
 internal class ColumnSegmentBuilder<TValue>
 {
     private readonly IComparer<TValue> _comparer;
+    private readonly IServiceProvider _provider;
     private readonly Dictionary<KeyWrapper, List<Range>> _groups;
     private readonly SerializerSessionPool _sessions;
-    private readonly Serializer<ColumnSegmentHeader<TValue>> _headerSerializer;
-    private readonly Serializer<ColumnSegmentRange> _rangeSerializer;
     private readonly Serializer<TValue> _valueSerializer;
 
-    public ColumnSegmentBuilder(IComparer<TValue> comparer, SerializerSessionPool sessions, Serializer<ColumnSegmentHeader<TValue>> headerSerializer, Serializer<ColumnSegmentRange> rangeSerializer, Serializer<TValue> valueSerializer)
+    public ColumnSegmentBuilder(IComparer<TValue> comparer, IServiceProvider provider, SerializerSessionPool sessions, Serializer<TValue> valueSerializer)
     {
         Guard.IsNotNull(comparer, nameof(comparer));
+        Guard.IsNotNull(provider, nameof(provider));
         Guard.IsNotNull(sessions, nameof(sessions));
-        Guard.IsNotNull(headerSerializer, nameof(headerSerializer));
-        Guard.IsNotNull(rangeSerializer, nameof(rangeSerializer));
         Guard.IsNotNull(valueSerializer, nameof(valueSerializer));
 
         _comparer = comparer;
+        _provider = provider;
         _sessions = sessions;
-        _headerSerializer = headerSerializer;
-        _rangeSerializer = rangeSerializer;
         _valueSerializer = valueSerializer;
 
         _groups = new(new KeyWrapperComparer(comparer));
@@ -33,7 +31,7 @@ internal class ColumnSegmentBuilder<TValue>
 
     private readonly ColumnSegmentStats.Builder _stats = ColumnSegmentStats.CreateBuilder();
 
-    public int Count { get; private set; }
+    public int Count => _stats.RowCount;
 
     /// <summary>
     /// Defers key comparisons to the underlying key type being wrapped to support null dictionary keys.
@@ -118,6 +116,8 @@ internal class ColumnSegmentBuilder<TValue>
             Start = Count,
             End = Count
         });
+
+        _stats.RangeCount++;
     }
 
     private void Increment(List<Range> list)
@@ -130,11 +130,7 @@ internal class ColumnSegmentBuilder<TValue>
         }
         else
         {
-            list.Add(new Range
-            {
-                Start = Count,
-                End = Count
-            });
+            Initialize(list);
         }
     }
 
@@ -158,7 +154,7 @@ internal class ColumnSegmentBuilder<TValue>
             _stats.DefaultValueCount++;
         }
 
-        Count++;
+        _stats.RowCount++;
     }
 
     public string Name { get; set; } = Empty;
@@ -168,6 +164,9 @@ internal class ColumnSegmentBuilder<TValue>
         var stream = ColumnStoreMemoryStreamManager.GetStream();
         using var session = _sessions.GetSession();
         var writer = Writer.Create(stream, session);
+
+        // todo: this payload is not yet version tolerant
+        // todo: trial adding version tolerance while comparing payload size
 
         // write the total group count
         writer.WriteVarUInt32((uint)_groups.Count);
@@ -198,6 +197,6 @@ internal class ColumnSegmentBuilder<TValue>
         _stats.Name = Name;
         _stats.DistinctValueCount = _groups.Count;
 
-        return new ColumnSegment<TValue>(stream, _stats.ToImmutable(), _headerSerializer, _rangeSerializer, _valueSerializer, _sessions);
+        return ActivatorUtilities.CreateInstance<ColumnSegment<TValue>>(_provider, stream, _stats.ToImmutable());
     }
 }

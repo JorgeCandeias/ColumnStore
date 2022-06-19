@@ -1,5 +1,5 @@
 ﻿namespace Outcompute.ColumnStore;
 
-internal record struct RangeQueryResult<TValue>(uint Start, uint End, TValue Value);
+internal record struct RangeQueryResult<TValue>(int Start, int End, TValue Value);
 
-internal record struct RangeQueryResult(uint Start, uint End);
+internal record struct RangeQueryResult(int Start, int End);
