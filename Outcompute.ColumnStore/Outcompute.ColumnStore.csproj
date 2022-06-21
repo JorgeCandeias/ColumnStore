@@ -16,6 +16,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="CodeGenerator\**" />
+	  <EmbeddedResource Remove="CodeGenerator\**" />
+	  <None Remove="CodeGenerator\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Diagnostics" Version="7.1.2" />
 		<PackageReference Include="CommunityToolkit.HighPerformance" Version="7.1.2" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
@@ -37,10 +43,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Outcompute.ColumnStore.Abstractions\Outcompute.ColumnStore.Abstractions.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="CodeGenerator\" />
 	</ItemGroup>
 
 </Project>

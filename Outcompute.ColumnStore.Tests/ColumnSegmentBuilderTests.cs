@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
+using Outcompute.ColumnStore.ColumnSegments;
+using Outcompute.ColumnStore.Segments;
 
 namespace Outcompute.ColumnStore.Tests;
 
@@ -58,7 +60,6 @@ public class ColumnSegmentBuilderTests
 
         // assert
         Assert.Equal(1, builder.Count);
-        Assert.IsType<ColumnSegment<int>>(result);
         Assert.Collection(result, x => Assert.Equal(123, x));
         Assert.Equal(name, result.Stats.Name);
         Assert.Equal(1, result.Stats.DistinctValueCount);

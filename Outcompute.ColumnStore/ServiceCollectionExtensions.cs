@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Outcompute.ColumnStore.ColumnSegments;
+using Outcompute.ColumnStore.Segments;
 
 namespace Outcompute.ColumnStore;
 

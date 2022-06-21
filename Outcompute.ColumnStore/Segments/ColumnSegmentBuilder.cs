@@ -1,33 +1,33 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Orleans.Serialization;
+﻿using Microsoft.IO;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Session;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Outcompute.ColumnStore;
+namespace Outcompute.ColumnStore.Segments;
 
-internal class ColumnSegmentBuilder<TValue>
+internal abstract class ColumnSegmentBuilder<T>
 {
-    private readonly IComparer<TValue> _comparer;
-    private readonly IServiceProvider _provider;
     private readonly Dictionary<KeyWrapper, List<Range>> _groups;
     private readonly SerializerSessionPool _sessions;
-    private readonly Serializer<TValue> _valueSerializer;
 
-    public ColumnSegmentBuilder(IComparer<TValue> comparer, IServiceProvider provider, SerializerSessionPool sessions, Serializer<TValue> valueSerializer)
+    protected ColumnSegmentBuilder(IComparer<T> comparer, IServiceProvider provider, SerializerSessionPool sessions)
     {
         Guard.IsNotNull(comparer, nameof(comparer));
         Guard.IsNotNull(provider, nameof(provider));
         Guard.IsNotNull(sessions, nameof(sessions));
-        Guard.IsNotNull(valueSerializer, nameof(valueSerializer));
 
-        _comparer = comparer;
-        _provider = provider;
+        Comparer = comparer;
         _sessions = sessions;
-        _valueSerializer = valueSerializer;
+
+        ServiceProvider = provider;
 
         _groups = new(new KeyWrapperComparer(comparer));
     }
+
+    protected IServiceProvider ServiceProvider { get; }
+
+    protected IComparer<T> Comparer { get; }
 
     private readonly ColumnSegmentStats.Builder _stats = ColumnSegmentStats.CreateBuilder();
 
@@ -38,24 +38,24 @@ internal class ColumnSegmentBuilder<TValue>
     /// </summary>
     private sealed class KeyWrapperComparer : IComparer<KeyWrapper>, IEqualityComparer<KeyWrapper>
     {
-        private readonly IComparer<TValue> _comparer;
+        private readonly IComparer<T> _comparer;
 
-        public KeyWrapperComparer(IComparer<TValue> comparer)
+        public KeyWrapperComparer(IComparer<T> comparer)
         {
             _comparer = comparer;
         }
 
-        public int Compare(ColumnSegmentBuilder<TValue>.KeyWrapper x, ColumnSegmentBuilder<TValue>.KeyWrapper y)
+        public int Compare(ColumnSegmentBuilder<T>.KeyWrapper x, ColumnSegmentBuilder<T>.KeyWrapper y)
         {
             return _comparer.Compare(x.Value, y.Value);
         }
 
-        public bool Equals(ColumnSegmentBuilder<TValue>.KeyWrapper x, ColumnSegmentBuilder<TValue>.KeyWrapper y)
+        public bool Equals(ColumnSegmentBuilder<T>.KeyWrapper x, ColumnSegmentBuilder<T>.KeyWrapper y)
         {
             return _comparer.Compare(x.Value, y.Value) == 0;
         }
 
-        public int GetHashCode([DisallowNull] ColumnSegmentBuilder<TValue>.KeyWrapper obj)
+        public int GetHashCode([DisallowNull] ColumnSegmentBuilder<T>.KeyWrapper obj)
         {
             return HashCode.Combine(obj.Value);
         }
@@ -64,7 +64,7 @@ internal class ColumnSegmentBuilder<TValue>
     /// <summary>
     /// Wraps the column value type to allow null dictionary keys.
     /// </summary>
-    private record struct KeyWrapper(TValue Value);
+    private readonly record struct KeyWrapper(T Value);
 
     private sealed class Range
     {
@@ -74,7 +74,7 @@ internal class ColumnSegmentBuilder<TValue>
 
     private sealed class RangeComparer : IComparer<Range>
     {
-        public int Compare(ColumnSegmentBuilder<TValue>.Range? x, ColumnSegmentBuilder<TValue>.Range? y)
+        public int Compare(ColumnSegmentBuilder<T>.Range? x, ColumnSegmentBuilder<T>.Range? y)
         {
             if (x is null)
             {
@@ -134,7 +134,7 @@ internal class ColumnSegmentBuilder<TValue>
         }
     }
 
-    public void Add(TValue value)
+    public void Add(T value)
     {
         var key = new KeyWrapper(value);
 
@@ -149,7 +149,7 @@ internal class ColumnSegmentBuilder<TValue>
             Initialize(list);
         }
 
-        if (_comparer.Compare(key.Value, default) == 0)
+        if (Comparer.Compare(key.Value, default) == 0)
         {
             _stats.DefaultValueCount++;
         }
@@ -159,28 +159,28 @@ internal class ColumnSegmentBuilder<TValue>
 
     public string Name { get; set; } = Empty;
 
-    public ColumnSegment<TValue> ToImmutable()
+    public ColumnSegment<T> ToImmutable()
     {
         var stream = ColumnStoreMemoryStreamManager.GetStream();
         using var session = _sessions.GetSession();
-        var writer = Writer.Create(stream, session);
+        var writer = Writer.Create<IBufferWriter<byte>>(stream, session);
 
         // todo: this payload is not yet version tolerant
         // todo: trial adding version tolerance while comparing payload size
 
-        // write the total group count
+        // prefix with the total group count
         writer.WriteVarUInt32((uint)_groups.Count);
 
-        // write the total range count
+        // prefix with the total range count
         writer.WriteVarUInt32((uint)_groups.Sum(x => x.Value.Count));
 
         // write each group
         foreach (var item in _groups)
         {
             // write the group value
-            _valueSerializer.Serialize(item.Key.Value, ref writer);
+            OnSerializeValue(item.Key.Value, ref writer);
 
-            // write the range count
+            // prefix with the range count
             writer.WriteVarUInt32((uint)item.Value.Count);
 
             // write each range
@@ -197,6 +197,10 @@ internal class ColumnSegmentBuilder<TValue>
         _stats.Name = Name;
         _stats.DistinctValueCount = _groups.Count;
 
-        return ActivatorUtilities.CreateInstance<ColumnSegment<TValue>>(_provider, stream, _stats.ToImmutable());
+        return OnCreate(stream, _stats.ToImmutable());
     }
+
+    protected abstract void OnSerializeValue(T value, ref Writer<IBufferWriter<byte>> writer);
+
+    protected abstract ColumnSegment<T> OnCreate(RecyclableMemoryStream stream, ColumnSegmentStats stats);
 }

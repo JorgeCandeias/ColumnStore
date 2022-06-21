@@ -2,7 +2,7 @@
 using Orleans.Serialization.Codecs;
 using Orleans.Serialization.Serializers;
 
-namespace Outcompute.ColumnStore;
+namespace Outcompute.ColumnStore.Segments;
 
 [RegisterSerializer]
 internal sealed class ColumnSegmentStatsBuilderCodec : GeneralizedReferenceTypeSurrogateCodec<ColumnSegmentStats.Builder, ColumnSegmentStatsSurrogate>

@@ -5,42 +5,40 @@ using Orleans.Serialization.Session;
 using System.Buffers;
 using System.Collections;
 
-namespace Outcompute.ColumnStore;
+namespace Outcompute.ColumnStore.Segments;
 
 /// <summary>
 /// A generic column segment that supports any type.
 /// </summary>
-internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisposable
+internal abstract class ColumnSegment<T> : IReadOnlyCollection<T>, IDisposable
 {
-    private readonly RecyclableMemoryStream _data;
-    private readonly ColumnSegmentStats _stats;
-    private readonly IComparer<TValue> _comparer;
-    private readonly Serializer<TValue> _valueSerializer;
-    private readonly SerializerSessionPool _sessions;
-
-    public ColumnSegment(RecyclableMemoryStream data, ColumnSegmentStats stats, IComparer<TValue> comparer, Serializer<TValue> valueSerializer, SerializerSessionPool sessions)
+    protected ColumnSegment(RecyclableMemoryStream data, ColumnSegmentStats stats, IComparer<T> comparer, Serializer<T> valueSerializer, SerializerSessionPool sessionPool)
     {
         Guard.IsNotNull(data, nameof(data));
         Guard.IsNotNull(stats, nameof(stats));
         Guard.IsNotNull(comparer, nameof(comparer));
         Guard.IsNotNull(valueSerializer, nameof(valueSerializer));
-        Guard.IsNotNull(sessions, nameof(sessions));
+        Guard.IsNotNull(sessionPool, nameof(sessionPool));
 
-        _data = data;
-        _stats = stats;
-        _comparer = comparer;
-        _valueSerializer = valueSerializer;
-        _sessions = sessions;
+        Data = data;
+        Stats = stats;
+        Comparer = comparer;
+        ValueSerializer = valueSerializer;
+        SessionPool = sessionPool;
     }
 
-    public ColumnSegmentStats Stats => _stats;
+    public ColumnSegmentStats Stats { get; }
+    protected RecyclableMemoryStream Data { get; }
+    protected SerializerSessionPool SessionPool { get; }
+    protected IComparer<T> Comparer { get; }
+    protected Serializer<T> ValueSerializer { get; }
 
-    public int Count => _stats.RowCount;
+    public int Count => Stats.RowCount;
 
-    public IEnumerator<RangeQueryResult> QueryByValue(TValue value)
+    public IEnumerator<RangeQueryResult> QueryByValue(T value)
     {
-        using var session = _sessions.GetSession();
-        var sequence = _data.GetReadOnlySequence();
+        using var session = SessionPool.GetSession();
+        var sequence = Data.GetReadOnlySequence();
         var reader = Reader.Create(sequence, session);
 
         // read the total group count
@@ -54,11 +52,11 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
         // read all groups to find the correct one
         for (var g = 0; g < totalGroups; g++)
         {
-            var candidate = _valueSerializer.Deserialize(ref reader);
+            var candidate = ValueSerializer.Deserialize(ref reader);
             var ranges = reader.ReadVarUInt32();
 
             // check if the group is relevant
-            if (_comparer.Compare(value, candidate) is 0)
+            if (Comparer.Compare(value, candidate) is 0)
             {
                 // consume groups
                 for (var r = 0; r < ranges; r++)
@@ -94,15 +92,15 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
     }
 
     // todo: optimize this via duck typing with a disposable struct enumerator
-    public IEnumerator<RangeQueryResult<TValue>> QueryByRange(int start, int end)
+    public IEnumerator<RangeQueryResult<T>> QueryByRange(int start, int end)
     {
         Guard.IsGreaterThanOrEqualTo(start, 0, nameof(start));
         Guard.IsLessThan(start, Count, nameof(start));
         Guard.IsGreaterThanOrEqualTo(end, start, nameof(end));
         Guard.IsLessThan(end, Count, nameof(end));
 
-        using var session = _sessions.GetSession();
-        var sequence = _data.GetReadOnlySequence();
+        using var session = SessionPool.GetSession();
+        var sequence = Data.GetReadOnlySequence();
         var reader = Reader.Create(sequence, session);
 
         // read the total group count
@@ -112,7 +110,7 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
         var totalRanges = reader.ReadVarUInt32();
 
         // read all ranges into a buffer as yield is incompatible with the ref reader
-        var resultBuffer = ArrayPool<RangeQueryResult<TValue>>.Shared.Rent((int)totalRanges);
+        var resultBuffer = ArrayPool<RangeQueryResult<T>>.Shared.Rent((int)totalRanges);
         var resultCount = 0;
 
         // read each group
@@ -121,7 +119,7 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
             // read the group value
             // todo: this is inneficient for non-primitives
             // todo: optimize this using an optional lookup serialization format
-            var value = _valueSerializer.Deserialize(ref reader);
+            var value = ValueSerializer.Deserialize(ref reader);
 
             // read the range count
             var ranges = reader.ReadVarUInt32();
@@ -142,7 +140,7 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
                 // check if the range still applies
                 if (s <= e)
                 {
-                    resultBuffer[resultCount++] = new RangeQueryResult<TValue>(s, e, value);
+                    resultBuffer[resultCount++] = new RangeQueryResult<T>(s, e, value);
                 }
             }
         }
@@ -155,14 +153,14 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
 
         // todo: this may not run if the enumeration is cancelled midway
         // todo: this needs refactoring into an isolated enumerator
-        ArrayPool<RangeQueryResult<TValue>>.Shared.Return(resultBuffer, true);
+        ArrayPool<RangeQueryResult<T>>.Shared.Return(resultBuffer, true);
     }
 
     /// <summary>
     /// Performs a full scan of the segment and yields every underlying source value as a regular collection would.
     /// This is a low performance fallback for cases where the user query cannot be evaluated in a more efficient way.
     /// </summary>
-    public IEnumerator<TValue> GetEnumerator()
+    public IEnumerator<T> GetEnumerator()
     {
         if (Count == 0)
         {
@@ -171,7 +169,7 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
 
         // todo: for now just rely on the range query but this needs optimization
         var enumerator = QueryByRange(0, Count - 1);
-        var sorted = new SortedDictionary<int, (int End, TValue Value)>();
+        var sorted = new SortedDictionary<int, (int End, T Value)>();
 
         while (enumerator.MoveNext())
         {
@@ -191,22 +189,27 @@ internal sealed class ColumnSegment<TValue> : IReadOnlyCollection<TValue>, IDisp
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    protected abstract IEnumerator<T> OnEnumerate();
+
     #region Disposable
 
-    private void DisposeCore()
+    protected virtual void Dispose(bool disposing)
     {
-        _data.Dispose();
+        if (disposing)
+        {
+            Data.Dispose();
+        }
     }
 
     public void Dispose()
     {
-        DisposeCore();
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
     ~ColumnSegment()
     {
-        DisposeCore();
+        Dispose(false);
     }
 
     #endregion Disposable

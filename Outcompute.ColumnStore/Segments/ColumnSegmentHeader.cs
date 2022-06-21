@@ -1,6 +1,6 @@
 ﻿using Orleans;
 
-namespace Outcompute.ColumnStore;
+namespace Outcompute.ColumnStore.Segments;
 
 [Immutable]
 [GenerateSerializer]

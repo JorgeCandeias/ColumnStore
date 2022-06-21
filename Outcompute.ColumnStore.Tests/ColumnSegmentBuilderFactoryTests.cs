@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
+using Outcompute.ColumnStore.ColumnSegments;
 
 namespace Outcompute.ColumnStore.Tests;
 
@@ -20,7 +21,6 @@ public class ColumnSegmentBuilderFactoryTests
         var builder = factory.Create(Comparer<int>.Default);
 
         // assert
-        Assert.IsType<ColumnSegmentBuilder<int>>(builder);
         Assert.Equal("", builder.Name);
         Assert.Equal(0, builder.Count);
     }

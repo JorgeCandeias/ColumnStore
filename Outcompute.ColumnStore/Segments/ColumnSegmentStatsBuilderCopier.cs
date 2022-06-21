@@ -1,7 +1,7 @@
 ﻿using Orleans;
 using Orleans.Serialization.Cloning;
 
-namespace Outcompute.ColumnStore;
+namespace Outcompute.ColumnStore.Segments;
 
 [RegisterCopier]
 internal sealed class ColumnSegmentStatsBuilderCopier : IDeepCopier<ColumnSegmentStats.Builder>
