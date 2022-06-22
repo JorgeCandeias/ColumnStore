@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Outcompute.ColumnStore.ColumnSegments;
-using Outcompute.ColumnStore.Segments;
+﻿using Outcompute.ColumnStore.Encodings;
 
 namespace Outcompute.ColumnStore;
 
@@ -15,8 +13,8 @@ public static class ServiceCollectionExtensions
             .AddGeneratedFactories()
             .AddSingleton(typeof(IColumnStoreFactory<>), typeof(ColumnStoreFactory<>))
             .AddSingleton(typeof(DeltaStoreFactory<>))
-            .AddSingleton(typeof(ColumnSegmentBuilderFactory<>))
-            .AddTransient(typeof(ColumnSegmentBuilder<>));
+            .AddSingleton(typeof(DefaultEncoding<>))
+            .AddSingleton(typeof(DictionaryEncoding<>));
     }
 
     private static IServiceCollection AddGeneratedFactories(this IServiceCollection services)

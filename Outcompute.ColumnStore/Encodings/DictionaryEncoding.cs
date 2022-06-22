@@ -1,8 +1,5 @@
-﻿using CommunityToolkit.HighPerformance.Buffers;
-using Orleans.Serialization;
-using Orleans.Serialization.Buffers;
-using Orleans.Serialization.Session;
-using System.Buffers;
+﻿using Orleans.Serialization.Buffers;
+using System.IO.Pipelines;
 
 namespace Outcompute.ColumnStore.Encodings;
 
@@ -26,50 +23,36 @@ internal class DictionaryEncoding<T> : Encoding<T>
         _sessions = sessions;
     }
 
-    public override void Encode(ReadOnlySequence<T> sequence, IBufferWriter<byte> writer)
+    public override MemoryOwner<byte> Encode(ReadOnlySpan<T> source)
     {
-        Guard.IsNotNull(writer, nameof(writer));
-        Guard.IsLessThanOrEqualTo(sequence.Length, int.MaxValue, nameof(sequence.Length));
-
         // create writing artefacts
         using var session = _sessions.GetSession();
-        var xwriter = Writer.Create(writer, session);
+        var pipe = new Pipe();
+        var writer = Writer.Create(pipe.Writer, session);
 
         // prefix with encoding id
-        xwriter.WriteVarUInt32((uint)WellKnownEncodings.Dictionary);
+        writer.WriteVarUInt32((uint)WellKnownEncodings.Dictionary);
 
         // prefix with row count
-        xwriter.WriteVarUInt32((uint)sequence.Length);
+        writer.WriteVarUInt32((uint)source.Length);
 
-        // break early if there are no values to write
-        if (sequence.Length == 0)
+        // write rows
+        if (source.Length > 0)
         {
-            return;
-        }
+            // create the running structures
+            var lookup = new Dictionary<KeyWrapper, int>();
+            using var ranges = SpanOwner<DictionaryRange>.Allocate(source.Length);
+            var span = ranges.Span;
+            var added = 0;
 
-        // create the running structures
-        var lookup = new Dictionary<KeyWrapper, int>();
-        using var ranges = MemoryOwner<DictionaryRange>.Allocate((int)sequence.Length);
-        var span = ranges.Span;
-        var added = 0;
+            // read the first item
+            var current = source[0];
+            var s = 0;
+            var l = 1;
 
-        // read the first item
-        T current = default!;
-        var s = 0;
-        var l = 1;
-        foreach (var memory in sequence.Slice(0, 1))
-        {
-            foreach (var value in memory.Span)
-            {
-                current = value;
-            }
-        }
-
-        // now run range detection on the rest
-        var comparer = EqualityComparer<T>.Default;
-        foreach (var memory in sequence.Slice(1))
-        {
-            foreach (var value in memory.Span)
+            // now run range detection on the rest
+            var comparer = EqualityComparer<T>.Default;
+            foreach (var value in source[1..])
             {
                 // see if we changed range
                 if (comparer.Equals(value, current))
@@ -87,25 +70,40 @@ internal class DictionaryEncoding<T> : Encoding<T>
                     l = 1;
                 }
             }
+
+            // close the last range (or first if there were no others)
+            AddRange(lookup, span, ref added, current, l);
+
+            // write the keys in index order
+            writer.WriteVarUInt32((uint)lookup.Count);
+            foreach (var item in lookup.OrderBy(x => x.Value))
+            {
+                _serializer.Serialize(item.Key.Value, ref writer);
+            }
+
+            // write the ranges in source order
+            writer.WriteVarUInt32((uint)added);
+            for (var i = 0; i < added; i++)
+            {
+                var item = span[i];
+
+                writer.WriteVarUInt32((uint)item.Index);
+                writer.WriteVarUInt32((uint)item.Length);
+            }
         }
 
-        // close the last range (or first if there were no others)
-        AddRange(lookup, span, ref added, current, l);
-
-        // write the keys in index order
-        xwriter.WriteVarUInt32((uint)lookup.Count);
-        foreach (var item in lookup.OrderBy(x => x.Value))
+        // compact the data and return
+        writer.Commit();
+        pipe.Writer.Complete();
+        if (!pipe.Reader.TryRead(out var data))
         {
-            _serializer.Serialize(item.Key.Value, ref xwriter);
+            ThrowHelper.ThrowInvalidOperationException();
         }
+        var result = MemoryOwner<byte>.Allocate((int)data.Buffer.Length);
+        data.Buffer.CopyTo(result.Span);
+        pipe.Reader.Complete();
 
-        // write the ranges in source order
-        xwriter.WriteUInt32((uint)lookup.Values.Count);
-        foreach (var item in span)
-        {
-            xwriter.WriteVarUInt32((uint)item.Index);
-            xwriter.WriteVarUInt32((uint)item.Length);
-        }
+        return result;
 
         static void AddRange(Dictionary<KeyWrapper, int> lookup, Span<DictionaryRange> span, ref int added, T value, int length)
         {
@@ -118,11 +116,11 @@ internal class DictionaryEncoding<T> : Encoding<T>
         }
     }
 
-    public override MemoryOwner<T> Decode(ReadOnlySequence<byte> sequence)
+    public override MemoryOwner<T> Decode(ReadOnlySpan<byte> source)
     {
         // create reading artefacts
         using var session = _sessions.GetSession();
-        var reader = Reader.Create(sequence, session);
+        var reader = Reader.Create(source, session);
 
         VerifyEncodingId(ref reader);
 
@@ -137,10 +135,11 @@ internal class DictionaryEncoding<T> : Encoding<T>
 
         // read keys
         var keyCount = (int)reader.ReadVarUInt32();
-        var keyBuffer = ArrayPool<T>.Shared.Rent(keyCount);
+        using var keyBuffer = SpanOwner<T>.Allocate(keyCount);
+        var keySpan = keyBuffer.Span;
         for (var i = 0; i < keyCount; i++)
         {
-            keyBuffer[i] = _serializer.Deserialize(ref reader);
+            keySpan[i] = _serializer.Deserialize(ref reader);
         }
 
         // read ranges
@@ -152,24 +151,21 @@ internal class DictionaryEncoding<T> : Encoding<T>
         {
             var index = (int)reader.ReadVarUInt32();
             var length = (int)reader.ReadVarUInt32();
-            var value = keyBuffer[index];
+            var value = keySpan[index];
             for (var i = 0; i < length; i++)
             {
                 span[added++] = value;
             }
         }
 
-        // cleanup
-        ArrayPool<T>.Shared.Return(keyBuffer, true);
-
         return result;
     }
 
-    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySequence<byte> sequence, T value)
+    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
     {
         // create reading artefacts
         using var session = _sessions.GetSession();
-        var reader = Reader.Create(sequence, session);
+        var reader = Reader.Create(source, session);
 
         VerifyEncodingId(ref reader);
 
@@ -220,11 +216,11 @@ internal class DictionaryEncoding<T> : Encoding<T>
         return result[..added];
     }
 
-    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySequence<byte> sequence, int start, int length)
+    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length)
     {
         // create reading artefacts
         using var session = _sessions.GetSession();
-        var reader = Reader.Create(sequence, session);
+        var reader = Reader.Create(source, session);
 
         VerifyEncodingId(ref reader);
 
@@ -286,7 +282,7 @@ internal class DictionaryEncoding<T> : Encoding<T>
 
     private record struct KeyWrapper(T Value);
 
-    private static void VerifyEncodingId(ref Reader<ReadOnlySequence<byte>> reader)
+    private static void VerifyEncodingId(ref Reader<SpanReaderInput> reader)
     {
         var id = reader.ReadVarUInt32();
         if (id != (int)WellKnownEncodings.Dictionary)
@@ -295,5 +291,5 @@ internal class DictionaryEncoding<T> : Encoding<T>
         }
     }
 
-    private static int ReadRowCount(ref Reader<ReadOnlySequence<byte>> reader) => (int)reader.ReadVarUInt32();
+    private static int ReadRowCount(ref Reader<SpanReaderInput> reader) => (int)reader.ReadVarUInt32();
 }

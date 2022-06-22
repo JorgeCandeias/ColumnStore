@@ -1,8 +1,5 @@
-﻿using CommunityToolkit.HighPerformance.Buffers;
-using Orleans.Serialization;
-using Orleans.Serialization.Buffers;
-using Orleans.Serialization.Session;
-using System.Buffers;
+﻿using Orleans.Serialization.Buffers;
+using System.IO.Pipelines;
 
 namespace Outcompute.ColumnStore.Encodings;
 
@@ -25,36 +22,45 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         _sessions = sessions;
     }
 
-    public override void Encode(ReadOnlySequence<T> sequence, IBufferWriter<byte> writer)
+    public override MemoryOwner<byte> Encode(ReadOnlySpan<T> source)
     {
-        Guard.IsNotNull(writer, nameof(writer));
-        Guard.IsLessThanOrEqualTo(sequence.Length, int.MaxValue, nameof(sequence.Length));
-
         // create writing artefacts
         using var session = _sessions.GetSession();
-        var xwriter = Writer.Create(writer, session);
+        var pipe = new Pipe();
+        var writer = Writer.Create(pipe.Writer, session);
 
         // prefix with the encoding id
-        xwriter.WriteVarUInt32((uint)WellKnownEncodings.Default);
+        writer.WriteVarUInt32((uint)WellKnownEncodings.Default);
 
         // prefix with the value count
-        xwriter.WriteVarUInt32((uint)sequence.Length);
+        writer.WriteVarUInt32((uint)source.Length);
 
         // write each value
-        foreach (var memory in sequence)
+        foreach (var value in source)
         {
-            foreach (var value in memory.Span)
-            {
-                _serializer.Serialize(value, ref xwriter);
-            }
+            _serializer.Serialize(value, ref writer);
         }
+
+        // convert to contiguous buffer
+        writer.Commit();
+        pipe.Writer.Complete();
+        if (!pipe.Reader.TryRead(out var data))
+        {
+            ThrowHelper.ThrowInvalidOperationException();
+        }
+
+        var result = MemoryOwner<byte>.Allocate((int)data.Buffer.Length);
+        data.Buffer.CopyTo(result.Span);
+        pipe.Reader.Complete();
+
+        return result;
     }
 
-    public override MemoryOwner<T> Decode(ReadOnlySequence<byte> sequence)
+    public override MemoryOwner<T> Decode(ReadOnlySpan<byte> source)
     {
-        // create reading artefacts
+        // create writing artefacts
         using var session = _sessions.GetSession();
-        var reader = Reader.Create(sequence, session);
+        var reader = Reader.Create(source, session);
 
         // read the encoding id
         var id = reader.ReadVarUInt32();
@@ -75,11 +81,11 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         return buffer;
     }
 
-    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySequence<byte> sequence, T value)
+    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
     {
         // create reading artefacts
         using var session = _sessions.GetSession();
-        var reader = Reader.Create(sequence, session);
+        var reader = Reader.Create(source, session);
 
         // read the encoding id
         var id = reader.ReadVarUInt32();
@@ -135,7 +141,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         return buffer[..added];
     }
 
-    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySequence<byte> sequence, int start, int length)
+    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length)
     {
         Guard.IsGreaterThanOrEqualTo(start, 0, nameof(start));
         Guard.IsGreaterThanOrEqualTo(length, 0, nameof(length));
@@ -148,7 +154,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
 
         // create reading artefacts
         using var session = _sessions.GetSession();
-        var reader = Reader.Create(sequence, session);
+        var reader = Reader.Create(source, session);
 
         // read the encoding id
         var id = reader.ReadVarUInt32();
