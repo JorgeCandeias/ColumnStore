@@ -7,10 +7,9 @@ using System.Buffers;
 namespace Outcompute.ColumnStore.Encodings;
 
 /// <summary>
-/// The default encoding implementation for when no other encoding works.
+/// The default encoding implementation for when no other encoding is available.
 /// This encoding serializes each sequence value individually.
-/// This can result in lower total size for sequences with high cardinality.
-/// However any queries always result in a full scan.
+/// This often generates the largest payload but it can result in a smaller one for sequences with very high cardinality.
 /// </summary>
 internal sealed class DefaultEncoding<T> : Encoding<T>
 {
@@ -26,7 +25,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         _sessions = sessions;
     }
 
-    public override void Encode(IBufferWriter<byte> writer, ReadOnlySequence<T> sequence)
+    public override void Encode(ReadOnlySequence<T> sequence, IBufferWriter<byte> writer)
     {
         Guard.IsNotNull(writer, nameof(writer));
         Guard.IsLessThanOrEqualTo(sequence.Length, int.MaxValue, nameof(sequence.Length));
@@ -34,6 +33,9 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         // create writing artefacts
         using var session = _sessions.GetSession();
         var xwriter = Writer.Create(writer, session);
+
+        // prefix with the encoding id
+        xwriter.WriteVarUInt32((uint)WellKnownEncodings.Default);
 
         // prefix with the value count
         xwriter.WriteVarUInt32((uint)sequence.Length);
@@ -54,6 +56,13 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         using var session = _sessions.GetSession();
         var reader = Reader.Create(sequence, session);
 
+        // read the encoding id
+        var id = reader.ReadVarUInt32();
+        if (id != (int)WellKnownEncodings.Default)
+        {
+            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Dictionary}'");
+        }
+
         // read the value count prefix
         var count = (int)reader.ReadVarUInt32();
 
@@ -71,6 +80,13 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         // create reading artefacts
         using var session = _sessions.GetSession();
         var reader = Reader.Create(sequence, session);
+
+        // read the encoding id
+        var id = reader.ReadVarUInt32();
+        if (id != (int)WellKnownEncodings.Default)
+        {
+            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Dictionary}'");
+        }
 
         // read the value count prefix
         var count = (int)reader.ReadVarUInt32();
@@ -133,6 +149,13 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         // create reading artefacts
         using var session = _sessions.GetSession();
         var reader = Reader.Create(sequence, session);
+
+        // read the encoding id
+        var id = reader.ReadVarUInt32();
+        if (id != (int)WellKnownEncodings.Default)
+        {
+            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Dictionary}'");
+        }
 
         // read the value count prefix
         var count = (int)reader.ReadVarUInt32();
