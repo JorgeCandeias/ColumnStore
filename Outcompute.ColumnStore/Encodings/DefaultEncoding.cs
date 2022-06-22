@@ -1,4 +1,5 @@
 ﻿using Orleans.Serialization.Buffers;
+using Outcompute.ColumnStore.Core.Buffers;
 using System.IO.Pipelines;
 
 namespace Outcompute.ColumnStore.Encodings;
@@ -97,14 +98,9 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         // read the value count prefix
         var count = (int)reader.ReadVarUInt32();
 
-        // break early if there is nothing to read
-        if (count == 0)
-        {
-            return MemoryOwner<ValueRange<T>>.Empty;
-        }
-
-        // allocate a pessimistic buffer assuming max cardinality
-        var buffer = MemoryOwner<ValueRange<T>>.Allocate(count, AllocationMode.Clear);
+        // allocate a pessimistic temporary buffer assuming max cardinality
+        using var buffer = SpanOwner<ValueRange<T>>.Allocate(count, AllocationMode.Clear);
+        var span = buffer.Span;
         var added = 0;
 
         // look for a range start
@@ -119,7 +115,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
                 var length = 1;
 
                 // look for a range end
-                for (; i < count; i++)
+                for (i++; i < count; i++)
                 {
                     var next = _serializer.Deserialize(ref reader);
                     if (comparer.Equals(value, next))
@@ -133,12 +129,12 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
                 }
 
                 // yield the found range
-                buffer.Span[added++] = new ValueRange<T>(value, start, length);
+                span[added++] = new ValueRange<T>(value, start, length);
             }
         }
 
-        // return a buffer sliced to its contents
-        return buffer[..added];
+        // copy the temporary buffer to a smaller one and return it
+        return span[..added].ToMemoryOwner();
     }
 
     public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length)

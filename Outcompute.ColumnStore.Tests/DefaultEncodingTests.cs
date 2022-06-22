@@ -9,7 +9,7 @@ public class DefaultEncodingTests
         .AddColumnStore()
         .BuildServiceProvider();
 
-    public class RoundtripInt32Data : TheoryData<int, int, IEnumerable<int>>
+    internal class RoundtripInt32Data : TheoryData<int, int, IEnumerable<int>>
     {
         public RoundtripInt32Data()
         {
@@ -33,7 +33,7 @@ public class DefaultEncodingTests
         }
     }
 
-    public class RoundtripStringData : TheoryData<int, int, IEnumerable<string>>
+    internal class RoundtripStringData : TheoryData<int, int, IEnumerable<string>>
     {
         public RoundtripStringData()
         {
@@ -98,4 +98,92 @@ public class DefaultEncodingTests
     {
         RoundtripCore(expectedLength, bufferLength, source);
     }
+
+    internal class QueryByValueInt32Data : TheoryData<int[], int, ValueRange<int>[]>
+    {
+        public QueryByValueInt32Data()
+        {
+            // empty
+            Add(Array.Empty<int>(), 1, Array.Empty<ValueRange<int>>());
+
+            // first item
+            Add(new int[] { 1, 2, 3, 4, 5 }, 1, new[] { new ValueRange<int>(1, 0, 1) });
+
+            // middle item
+            Add(new int[] { 1, 2, 3, 4, 5 }, 3, new[] { new ValueRange<int>(3, 2, 1) });
+
+            // last item
+            Add(new int[] { 1, 2, 3, 4, 5 }, 5, new[] { new ValueRange<int>(5, 4, 1) });
+
+            // first items
+            Add(new int[] { 1, 1, 1, 4, 5 }, 1, new[] { new ValueRange<int>(1, 0, 3) });
+
+            // middle items
+            Add(new int[] { 1, 3, 3, 3, 5 }, 3, new[] { new ValueRange<int>(3, 1, 3) });
+
+            // last items
+            Add(new int[] { 1, 2, 5, 5, 5 }, 5, new[] { new ValueRange<int>(5, 2, 3) });
+
+            // mixed single item
+            Add(new int[] { 1, 2, 1, 5, 1 }, 1, new[]
+            {
+                new ValueRange<int>(1, 0, 1),
+                new ValueRange<int>(1, 2, 1),
+                new ValueRange<int>(1, 4, 1),
+            });
+
+            // mixed multiple items
+            Add(new int[] { 1, 1, 1, 2, 3, 4, 1, 1, 1, 5, 6, 7, 1, 1, 1 }, 1, new[]
+            {
+                new ValueRange<int>(1, 0, 3),
+                new ValueRange<int>(1, 6, 3),
+                new ValueRange<int>(1, 12, 3),
+            });
+        }
+    }
+
+    [Theory]
+    [ClassData(typeof(QueryByValueInt32Data))]
+    internal void QueryByValueInt32(int[] source, int value, ValueRange<int>[] expected)
+    {
+        // arrange
+        var encoding = _provider.GetRequiredService<DefaultEncoding<int>>();
+        using var encoded = encoding.Encode(source.AsSpan());
+
+        // act
+        var result = encoding.Decode(encoded.Span, value);
+
+        // assert
+        Assert.True(result.Span.SequenceEqual(expected.AsSpan()));
+    }
+
+    /*
+    private void RoundtripCore<T>(IEnumerable<T> source, T value, IEnumerable<ValueRange<int>> expected)
+    {
+        // materialize the test data
+        using var owner = SpanOwner<T>.Allocate(bufferLength);
+        var data = owner.Span;
+        var added = 0;
+        foreach (var item in source)
+        {
+            data[added++] = item;
+        }
+        Assert.Equal(added, bufferLength);
+
+        // arrange
+        var encoding = _provider.GetRequiredService<DefaultEncoding<T>>();
+
+        // act - encode
+        using var encoded = encoding.Encode(data);
+
+        // assert - encoded
+        Assert.Equal(expectedLength, encoded.Length);
+
+        // act - decode
+        using var decoded = encoding.Decode(encoded.Span);
+
+        // assert - decoded
+        Assert.True(data.SequenceEqual(decoded.Span));
+    }
+    */
 }
