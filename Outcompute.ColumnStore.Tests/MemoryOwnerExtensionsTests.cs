@@ -1,10 +1,45 @@
 ﻿using CommunityToolkit.HighPerformance;
 using Outcompute.ColumnStore.Core.Buffers;
+using System.Buffers;
+using System.IO.Pipelines;
 
 namespace Outcompute.ColumnStore.Tests;
 
 public class MemoryOwnerExtensionsTests
 {
+    [Fact]
+    public void ToMemoryOwnerFromEmptyPipeReader()
+    {
+        // arrange
+        var pipe = new Pipe();
+
+        // act
+        using var owner = pipe.Reader.ToMemoryOwner(true);
+
+        // assert
+        Assert.Equal(0, owner.Span.Length);
+    }
+
+    [Fact]
+    public void ToMemoryOwnerFromFilledPipeReader()
+    {
+        // arrange
+        var data = new byte[] { 1, 2, 3 };
+        var pipe = new Pipe();
+        foreach (var item in data)
+        {
+            pipe.Writer.Write(item);
+        }
+        pipe.Writer.Complete();
+
+        // act
+        using var owner = pipe.Reader.ToMemoryOwner(true);
+
+        // assert
+        Assert.Equal(3, owner.Span.Length);
+        Assert.True(owner.Span.SequenceEqual(data.AsSpan()));
+    }
+
     [Fact]
     public void ToMemoryOwnerFromReadOnlySpan()
     {

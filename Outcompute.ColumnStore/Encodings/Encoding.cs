@@ -8,12 +8,12 @@ internal abstract class Encoding<T>
     /// <summary>
     /// Encodes the specified values using the specified writer.
     /// </summary>
-    public abstract MemoryOwner<byte> Encode(ReadOnlySpan<T> source);
+    public abstract IMemoryOwner<byte> Encode(ReadOnlySpan<T> source);
 
     /// <summary>
     /// Decodes all underlying values in the specified sequence.
     /// </summary>
-    public abstract MemoryOwner<T> Decode(ReadOnlySpan<byte> source);
+    public abstract IMemoryOwner<T> Decode(ReadOnlySpan<byte> source);
 
     /// <summary>
     /// Decodes all underlying ranges for the specified value in the specified sequence.

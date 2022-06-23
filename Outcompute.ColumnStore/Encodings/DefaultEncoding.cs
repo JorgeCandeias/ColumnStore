@@ -1,6 +1,5 @@
 ﻿using Orleans.Serialization.Buffers;
 using Outcompute.ColumnStore.Core.Buffers;
-using System.IO.Pipelines;
 
 namespace Outcompute.ColumnStore.Encodings;
 
@@ -23,63 +22,31 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         _sessions = sessions;
     }
 
-    public override MemoryOwner<byte> Encode(ReadOnlySpan<T> source)
+    public override IMemoryOwner<byte> Encode(ReadOnlySpan<T> source)
     {
-        // create writing artefacts
+        // arrange
         using var session = _sessions.GetSession();
-        var pipe = new Pipe();
-        var writer = Writer.Create(pipe.Writer, session);
+        var buffer = new ArrayPoolBufferWriter<byte>();
+        var writer = Writer.Create(buffer, session);
 
-        // prefix with the encoding id
-        writer.WriteVarUInt32((uint)WellKnownEncodings.Default);
-
-        // prefix with the value count
-        writer.WriteVarUInt32((uint)source.Length);
-
-        // write each value
-        foreach (var value in source)
-        {
-            _serializer.Serialize(value, ref writer);
-        }
-
-        // convert to contiguous buffer
+        // write
+        WriteEncodingId(ref writer);
+        WriteSequence(source, _serializer, ref writer);
         writer.Commit();
-        pipe.Writer.Complete();
-        if (!pipe.Reader.TryRead(out var data))
-        {
-            ThrowHelper.ThrowInvalidOperationException();
-        }
 
-        var result = MemoryOwner<byte>.Allocate((int)data.Buffer.Length);
-        data.Buffer.CopyTo(result.Span);
-        pipe.Reader.Complete();
-
-        return result;
+        // done
+        return buffer;
     }
 
-    public override MemoryOwner<T> Decode(ReadOnlySpan<byte> source)
+    public override IMemoryOwner<T> Decode(ReadOnlySpan<byte> source)
     {
         // create writing artefacts
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
 
-        // read the encoding id
-        var id = reader.ReadVarUInt32();
-        if (id != (int)WellKnownEncodings.Default)
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Dictionary}'");
-        }
-
-        // read the value count prefix
-        var count = (int)reader.ReadVarUInt32();
-
-        // read each value into the output buffer
-        var buffer = MemoryOwner<T>.Allocate(count, AllocationMode.Clear);
-        for (var i = 0; i < count; i++)
-        {
-            buffer.Span[i] = _serializer.Deserialize(ref reader);
-        }
-        return buffer;
+        // read content
+        VerifyEncodingId(ref reader);
+        return ReadSequence(_serializer, ref reader);
     }
 
     public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
@@ -88,15 +55,9 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
 
-        // read the encoding id
-        var id = reader.ReadVarUInt32();
-        if (id != (int)WellKnownEncodings.Default)
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Dictionary}'");
-        }
+        VerifyEncodingId(ref reader);
 
-        // read the value count prefix
-        var count = (int)reader.ReadVarUInt32();
+        int count = ReadCount(ref reader);
 
         // allocate a pessimistic temporary buffer assuming max cardinality
         using var buffer = SpanOwner<ValueRange<T>>.Allocate(count, AllocationMode.Clear);
@@ -210,5 +171,54 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
 
         // return a buffer sliced to its contents
         return buffer[..added];
+    }
+
+    private static void WriteEncodingId<TInput>(ref Writer<TInput> writer) where TInput : IBufferWriter<byte>
+    {
+        writer.WriteVarUInt32((uint)WellKnownEncodings.Default);
+    }
+
+    private static void VerifyEncodingId<TInput>(ref Reader<TInput> reader)
+    {
+        var id = (WellKnownEncodings)(int)reader.ReadVarUInt32();
+        if (id != WellKnownEncodings.Default)
+        {
+            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Default}'");
+        }
+    }
+
+    private static void WriteSequence<TInput>(ReadOnlySpan<T> source, Serializer<T> serializer, ref Writer<TInput> writer) where TInput : IBufferWriter<byte>
+    {
+        WriteCount(source.Length, ref writer);
+        for (var i = 0; i < source.Length; i++)
+        {
+            serializer.Serialize(source[i], ref writer);
+        }
+    }
+
+    private static MemoryOwner<T> ReadSequence<TInput>(Serializer<T> serializer, ref Reader<TInput> reader)
+    {
+        // read the value count prefix
+        var count = ReadCount(ref reader);
+
+        // read each value into a well sized buffer
+        var buffer = MemoryOwner<T>.Allocate(count);
+        var span = buffer.Span;
+        for (var i = 0; i < count; i++)
+        {
+            span[i] = serializer.Deserialize(ref reader);
+        }
+
+        return buffer;
+    }
+
+    private static void WriteCount<TBufferWriter>(int count, ref Writer<TBufferWriter> writer) where TBufferWriter : IBufferWriter<byte>
+    {
+        writer.WriteVarUInt32((uint)count);
+    }
+
+    private static int ReadCount<TInput>(ref Reader<TInput> reader)
+    {
+        return (int)reader.ReadVarUInt32();
     }
 }

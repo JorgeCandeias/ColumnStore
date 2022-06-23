@@ -1,9 +1,39 @@
-﻿using System.Threading.Channels;
+﻿using System.IO.Pipelines;
+using System.Threading.Channels;
 
 namespace Outcompute.ColumnStore.Core.Buffers;
 
 public static class MemoryOwnerExtensions
 {
+    /// <summary>
+    /// Creates a <see cref="MemoryOwner{T}"/> from the contents of the specified <see cref="PipeReader"/>.
+    /// Optionally completes the specified <see cref="PipeReader"/> for convenience.
+    /// </summary>
+    public static MemoryOwner<byte> ToMemoryOwner(this PipeReader reader, bool complete = false)
+    {
+        Guard.IsNotNull(reader, nameof(reader));
+
+        MemoryOwner<byte> owner;
+
+        if (reader.TryRead(out var result))
+        {
+            var sequence = result.Buffer;
+            owner = MemoryOwner<byte>.Allocate((int)sequence.Length);
+            sequence.CopyTo(owner.Span);
+        }
+        else
+        {
+            owner = MemoryOwner<byte>.Empty;
+        }
+
+        if (complete)
+        {
+            reader.Complete();
+        }
+
+        return owner;
+    }
+
     public static MemoryOwner<T> ToMemoryOwner<T>(this ReadOnlySpan<T> source)
     {
         var owner = MemoryOwner<T>.Allocate(source.Length);

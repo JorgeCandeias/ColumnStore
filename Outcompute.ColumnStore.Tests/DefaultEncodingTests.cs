@@ -76,13 +76,13 @@ public class DefaultEncodingTests
         using var encoded = encoding.Encode(data);
 
         // assert - encoded
-        Assert.Equal(expectedLength, encoded.Length);
+        Assert.Equal(expectedLength, encoded.Memory.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Span);
+        using var decoded = encoding.Decode(encoded.Memory.Span);
 
         // assert - decoded
-        Assert.True(data.SequenceEqual(decoded.Span));
+        Assert.True(data.SequenceEqual(decoded.Memory.Span));
     }
 
     [Theory]
@@ -151,7 +151,7 @@ public class DefaultEncodingTests
         using var encoded = encoding.Encode(source.AsSpan());
 
         // act
-        var result = encoding.Decode(encoded.Span, value);
+        var result = encoding.Decode(encoded.Memory.Span, value);
 
         // assert
         Assert.True(result.Span.SequenceEqual(expected.AsSpan()));
