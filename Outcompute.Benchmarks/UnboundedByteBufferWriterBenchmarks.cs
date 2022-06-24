@@ -1,11 +1,9 @@
 ﻿using BenchmarkDotNet.Attributes;
 using CommunityToolkit.HighPerformance.Buffers;
-using Microsoft.Extensions.ObjectPool;
-using Orleans.Serialization.Buffers;
+using CommunityToolkit.HighPerformance.Helpers;
 using Orleans.Serialization.Buffers.Adaptors;
 using System.Buffers;
 using System.IO.Pipelines;
-using System.Threading.Channels;
 
 namespace Outcompute.Benchmarks;
 
@@ -17,502 +15,167 @@ namespace Outcompute.Benchmarks;
 [MemoryDiagnoser, MarkdownExporter, ShortRunJob]
 public class UnboundedByteBufferWriterBenchmarks
 {
-    private static readonly UnboundedChannelOptions _channelOptions = new() { SingleReader = true, SingleWriter = true, AllowSynchronousContinuations = true };
     private static readonly PipeOptions _pipeOptions = new(null, PipeScheduler.Inline, PipeScheduler.Inline, -1, -1, -1, false);
 
-    // one million values is the typical source column segment row count
+    // 1M values is the typical source column segment row count
     // it is also the worst case encoding scenario when plain encoding is elected
-    [Params(1024 * 1024)]
+    // it is also the max shared array pool size before it starts allocating fixed sized arrays
+    [Params(1024, 1024 * 1024)]
     public int N { get; set; }
 
     // number of items written in each go
-    // this helps identify how write frequency affects perf on each case
+    // this helps identify how write frequency affects perf on each case based on requested write buffer
     [Params(1, 1024)]
     public int Written { get; set; }
+
+    // number of parallel workers
+    // simulates how the rowgroup conversion process will encode multiple columns in parallel
+    [Params(1, 8)]
+    public int Parallelism { get; set; }
+
+    public readonly struct PooledArrayBufferWriterLatestWorker : IAction
+    {
+        private readonly int _n;
+        private readonly int _written;
+
+        public PooledArrayBufferWriterLatestWorker(int n, int written)
+        {
+            _n = n;
+            _written = written;
+        }
+
+        public void Invoke(int i)
+        {
+            using var buffer = new PooledArrayBufferWriterLatest(0);
+            for (var x = 0; x < _n; x += _written)
+            {
+                var span = buffer.GetSpan(_written);
+                span[.._written].Fill(byte.MaxValue);
+                buffer.Advance(_written);
+            }
+        }
+    }
 
     [Benchmark]
     public void PooledArrayBufferWriterLatest()
     {
-        using var buffer = new PooledArrayBufferWriterLatest(0);
-        for (var i = 0; i < N; i += Written)
+        ParallelHelper.For(0..Parallelism, new PooledArrayBufferWriterLatestWorker(N, Written));
+    }
+
+    public readonly struct PooledArrayBufferWriterWorker : IAction
+    {
+        private readonly int _n;
+        private readonly int _written;
+
+        public PooledArrayBufferWriterWorker(int n, int written)
         {
-            var span = buffer.GetSpan(Written);
-            span[..Written].Fill(byte.MaxValue);
-            buffer.Advance(Written);
+            _n = n;
+            _written = written;
+        }
+
+        public void Invoke(int i)
+        {
+            using var buffer = new PooledArrayBufferWriter(0);
+            for (var x = 0; x < _n; x += _written)
+            {
+                var span = buffer.GetSpan(_written);
+                span[.._written].Fill(byte.MaxValue);
+                buffer.Advance(_written);
+            }
         }
     }
 
     [Benchmark]
     public void PooledArrayBufferWriter()
     {
-        using var buffer = new PooledArrayBufferWriter(0);
-        for (var i = 0; i < N; i += Written)
+        ParallelHelper.For(0..Parallelism, new PooledArrayBufferWriterWorker(N, Written));
+    }
+
+    public readonly struct ArrayPoolBufferWriterWorker : IAction
+    {
+        private readonly int _n;
+        private readonly int _written;
+
+        public ArrayPoolBufferWriterWorker(int n, int written)
         {
-            var span = buffer.GetSpan(Written);
-            span[..Written].Fill(byte.MaxValue);
-            buffer.Advance(Written);
+            _n = n;
+            _written = written;
+        }
+
+        public void Invoke(int i)
+        {
+            using var buffer = new ArrayPoolBufferWriter<byte>();
+            for (var x = 0; x < _n; x += _written)
+            {
+                var span = buffer.GetSpan(_written);
+                span[.._written].Fill(byte.MaxValue);
+                buffer.Advance(_written);
+            }
         }
     }
 
     [Benchmark]
     public void ArrayPoolBufferWriter()
     {
-        using var buffer = new ArrayPoolBufferWriter<byte>();
-        for (var i = 0; i < N; i += Written)
+        ParallelHelper.For(0..Parallelism, new ArrayPoolBufferWriterWorker(N, Written));
+    }
+
+    public readonly struct ArrayBufferWriterWorker : IAction
+    {
+        private readonly int _n;
+        private readonly int _written;
+
+        public ArrayBufferWriterWorker(int n, int written)
         {
-            var span = buffer.GetSpan(Written);
-            span[..Written].Fill(byte.MaxValue);
-            buffer.Advance(Written);
+            _n = n;
+            _written = written;
+        }
+
+        public void Invoke(int i)
+        {
+            var buffer = new ArrayBufferWriter<byte>();
+            for (var x = 0; x < _n; x += _written)
+            {
+                var span = buffer.GetSpan(_written);
+                span[.._written].Fill(byte.MaxValue);
+                buffer.Advance(_written);
+            }
         }
     }
 
     [Benchmark]
     public void ArrayBufferWriter()
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        for (var i = 0; i < N; i += Written)
+        ParallelHelper.For(0..Parallelism, new ArrayBufferWriterWorker(N, Written));
+    }
+
+    public readonly struct PipeWorker : IAction
+    {
+        private readonly int _n;
+        private readonly int _written;
+
+        public PipeWorker(int n, int written)
         {
-            var span = buffer.GetSpan(Written);
-            span[..Written].Fill(byte.MaxValue);
-            buffer.Advance(Written);
+            _n = n;
+            _written = written;
+        }
+
+        public void Invoke(int i)
+        {
+            var pipe = new Pipe(_pipeOptions);
+            for (var x = 0; x < _n; x += _written)
+            {
+                var span = pipe.Writer.GetSpan(_written);
+                span[.._written].Fill(byte.MaxValue);
+                pipe.Writer.Advance(_written);
+            }
+            pipe.Writer.Complete();
         }
     }
 
     [Benchmark]
     public void Pipe()
     {
-        var pipe = new Pipe(_pipeOptions);
-        for (var i = 0; i < N; i += Written)
-        {
-            var span = pipe.Writer.GetSpan(Written);
-            span[..Written].Fill(byte.MaxValue);
-            pipe.Writer.Advance(Written);
-        }
-        pipe.Writer.Complete();
-    }
-
-    /*
-    [Benchmark]
-    public void Channel()
-    {
-        var channel = System.Threading.Channels.Channel.CreateUnbounded<byte>(_channelOptions);
-        for (var i = 0; i < N; i++)
-        {
-            if (!channel.Writer.TryWrite(byte.MaxValue))
-            {
-                ThrowHelper.ThrowInvalidOperationException();
-            }
-        }
-        channel.Writer.Complete();
-    }
-    */
-}
-
-/// <summary>
-/// A <see cref="IBufferWriter{T}"/> implementation implemented using pooled arrays.
-/// </summary>
-public struct PooledArrayBufferWriterLatest : IBufferWriter<byte>, IDisposable
-{
-    private static readonly ArrayPool<byte> Pool = ArrayPool<byte>.Shared;
-    private readonly List<(byte[] Array, int Length)> _committed;
-    private readonly int _minAllocationSize;
-    private byte[] _current;
-    private long _totalLength;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PooledArrayBufferWriter"/> struct.
-    /// </summary>
-    public PooledArrayBufferWriterLatest() : this(0)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PooledArrayBufferWriter"/> struct.
-    /// </summary>
-    /// <param name="minAllocationSize">Minimum size of the allocation.</param>
-    public PooledArrayBufferWriterLatest(int minAllocationSize)
-    {
-        _committed = new();
-        _current = Array.Empty<byte>();
-        _totalLength = 0;
-        _minAllocationSize = minAllocationSize > 0 ? minAllocationSize : 4096;
-    }
-
-    /// <summary>Gets the total length which has been written.</summary>
-    public readonly long Length => _totalLength;
-
-    /// <summary>
-    /// Returns the data which has been written as an array.
-    /// </summary>
-    /// <returns>The data which has been written.</returns>
-    public readonly byte[] ToArray()
-    {
-        var result = new byte[_totalLength];
-        var resultSpan = result.AsSpan();
-        foreach (var (buffer, length) in _committed)
-        {
-            buffer.AsSpan(0, length).CopyTo(resultSpan);
-            resultSpan = resultSpan.Slice(length);
-        }
-
-        return result;
-    }
-
-    /// <inheritdoc/>
-    public void Advance(int bytes)
-    {
-        if (bytes == 0)
-        {
-            return;
-        }
-
-        _committed.Add((_current, bytes));
-        _totalLength += bytes;
-        _current = Array.Empty<byte>();
-    }
-
-    public void Reset()
-    {
-        foreach (var (array, _) in _committed)
-        {
-            if (array.Length == 0)
-            {
-                continue;
-            }
-
-            Pool.Return(array);
-        }
-
-        _committed.Clear();
-        _current = Array.Empty<byte>();
-        _totalLength = 0;
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        Reset();
-    }
-
-    /// <inheritdoc/>
-    public Memory<byte> GetMemory(int sizeHint = 0)
-    {
-        if (sizeHint == 0)
-        {
-            sizeHint = _current.Length + _minAllocationSize;
-        }
-
-        if (sizeHint < _current.Length)
-        {
-            throw new InvalidOperationException("Attempted to allocate a new buffer when the existing buffer has sufficient free space.");
-        }
-
-        var newBuffer = Pool.Rent(Math.Max(sizeHint, _minAllocationSize));
-        _current.CopyTo(newBuffer.AsSpan());
-        Pool.Return(_current);
-        _current = newBuffer;
-        return newBuffer;
-    }
-
-    /// <inheritdoc/>
-    public Span<byte> GetSpan(int sizeHint)
-    {
-        if (sizeHint == 0)
-        {
-            sizeHint = _current.Length + _minAllocationSize;
-        }
-
-        if (sizeHint < _current.Length)
-        {
-            throw new InvalidOperationException("Attempted to allocate a new buffer when the existing buffer has sufficient free space.");
-        }
-
-        var newBuffer = Pool.Rent(Math.Max(sizeHint, _minAllocationSize));
-        _current.CopyTo(newBuffer.AsSpan());
-        Pool.Return(_current);
-        _current = newBuffer;
-        return newBuffer;
-    }
-
-    /// <summary>Copies the contents of this writer to another writer.</summary>
-    public readonly void CopyTo<TBufferWriter>(ref Writer<TBufferWriter> writer) where TBufferWriter : IBufferWriter<byte>
-    {
-        foreach (var (buffer, length) in _committed)
-        {
-            writer.Write(buffer.AsSpan(0, length));
-        }
-    }
-
-    /// <summary>
-    /// Returns a new <see cref="ReadOnlySequence{T}"/> which must be used and returned before resetting this instance via the <see cref="ReturnReadOnlySequence"/> method.
-    /// </summary>
-    public readonly ReadOnlySequence<byte> RentReadOnlySequence()
-    {
-        if (_totalLength == 0)
-        {
-            return ReadOnlySequence<byte>.Empty;
-        }
-
-        if (_committed.Count == 1)
-        {
-            var value = _committed[0];
-            return new ReadOnlySequence<byte>(value.Array, 0, value.Length);
-        }
-
-        var runningIndex = 0;
-        var firstSegment = default(BufferSegment);
-        var previousSegment = default(BufferSegment);
-        foreach (var (buffer, length) in _committed)
-        {
-            var segment = BufferSegment.Pool.Get();
-            segment.Initialize(new ReadOnlyMemory<byte>(buffer, 0, length), runningIndex);
-
-            runningIndex += length;
-
-            previousSegment?.SetNext(segment);
-
-            firstSegment ??= segment;
-            previousSegment = segment;
-        }
-
-        return new ReadOnlySequence<byte>(firstSegment, 0, previousSegment, previousSegment.Memory.Length);
-    }
-
-    /// <summary>
-    /// Returns a <see cref="ReadOnlySequence{T}"/> previously rented by <see cref="RentReadOnlySequence"/>;
-    /// </summary>
-    public readonly void ReturnReadOnlySequence(in ReadOnlySequence<byte> sequence)
-    {
-        if (sequence.Start.GetObject() is not BufferSegment segment)
-        {
-            return;
-        }
-
-        while (segment is not null)
-        {
-            var next = segment.Next as BufferSegment;
-            BufferSegment.Pool.Return(segment);
-            segment = next;
-        }
-    }
-}
-
-internal sealed class BufferSegment : ReadOnlySequenceSegment<byte>
-{
-    public static readonly ObjectPool<BufferSegment> Pool = ObjectPool.Create(new SegmentPoolPolicy());
-
-    public void Initialize(ReadOnlyMemory<byte> memory, long runningIndex)
-    {
-        Memory = memory;
-        RunningIndex = runningIndex;
-    }
-
-    public void SetNext(BufferSegment next) => Next = next;
-
-    public void Reset()
-    {
-        Memory = default;
-        RunningIndex = default;
-        Next = default;
-    }
-
-    private sealed class SegmentPoolPolicy : PooledObjectPolicy<BufferSegment>
-    {
-        public override BufferSegment Create() => new();
-
-        public override bool Return(BufferSegment obj)
-        {
-            obj.Reset();
-            return true;
-        }
-    }
-}
-
-/// <summary>
-/// A <see cref="IBufferWriter{T}"/> implementation implemented using pooled arrays.
-/// </summary>
-public struct PooledArrayBufferWriterHacked : IBufferWriter<byte>, IDisposable
-{
-    private static readonly ArrayPool<byte> Pool = ArrayPool<byte>.Shared;
-    private readonly List<(byte[] Array, int Length)> _committed;
-    private readonly int _minAllocationSize;
-    private byte[] _current;
-    private long _totalLength;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PooledArrayBufferWriter"/> struct.
-    /// </summary>
-    public PooledArrayBufferWriterHacked() : this(0)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PooledArrayBufferWriter"/> struct.
-    /// </summary>
-    /// <param name="minAllocationSize">Minimum size of the allocation.</param>
-    public PooledArrayBufferWriterHacked(int minAllocationSize)
-    {
-        _committed = new();
-        _current = Array.Empty<byte>();
-        _totalLength = 0;
-        _minAllocationSize = minAllocationSize > 0 ? minAllocationSize : 4096;
-    }
-
-    /// <summary>Gets the total length which has been written.</summary>
-    public readonly long Length => _totalLength;
-
-    /// <summary>
-    /// Returns the data which has been written as an array.
-    /// </summary>
-    /// <returns>The data which has been written.</returns>
-    public readonly byte[] ToArray()
-    {
-        var result = new byte[_totalLength];
-        var resultSpan = result.AsSpan();
-        foreach (var (buffer, length) in _committed)
-        {
-            buffer.AsSpan(0, length).CopyTo(resultSpan);
-            resultSpan = resultSpan.Slice(length);
-        }
-
-        return result;
-    }
-
-    /// <inheritdoc/>
-    public void Advance(int bytes)
-    {
-        if (bytes == 0)
-        {
-            return;
-        }
-
-        _committed.Add((_current, bytes));
-        _totalLength += bytes;
-        _current = Array.Empty<byte>();
-    }
-
-    public void Reset()
-    {
-        foreach (var (array, _) in _committed)
-        {
-            if (array.Length == 0)
-            {
-                continue;
-            }
-
-            Pool.Return(array);
-        }
-
-        _committed.Clear();
-        _current = Array.Empty<byte>();
-        _totalLength = 0;
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        Reset();
-    }
-
-    /// <inheritdoc/>
-    public Memory<byte> GetMemory(int sizeHint = 0)
-    {
-        if (sizeHint == 0)
-        {
-            sizeHint = _current.Length + _minAllocationSize;
-        }
-
-        if (sizeHint < _current.Length)
-        {
-            throw new InvalidOperationException("Attempted to allocate a new buffer when the existing buffer has sufficient free space.");
-        }
-
-        var newBuffer = Pool.Rent(Math.Max(sizeHint, _minAllocationSize));
-        _current.CopyTo(newBuffer.AsSpan());
-        Pool.Return(_current);
-        _current = newBuffer;
-        return newBuffer;
-    }
-
-    /// <inheritdoc/>
-    public Span<byte> GetSpan(int sizeHint)
-    {
-        if (sizeHint == 0)
-        {
-            sizeHint = _current.Length + _minAllocationSize;
-        }
-
-        if (sizeHint < _current.Length)
-        {
-            throw new InvalidOperationException("Attempted to allocate a new buffer when the existing buffer has sufficient free space.");
-        }
-
-        var newBuffer = Pool.Rent(Math.Max(sizeHint, _minAllocationSize));
-        _current.CopyTo(newBuffer.AsSpan());
-        Pool.Return(_current);
-        _current = newBuffer;
-        return newBuffer;
-    }
-
-    /// <summary>Copies the contents of this writer to another writer.</summary>
-    public readonly void CopyTo<TBufferWriter>(ref Writer<TBufferWriter> writer) where TBufferWriter : IBufferWriter<byte>
-    {
-        foreach (var (buffer, length) in _committed)
-        {
-            writer.Write(buffer.AsSpan(0, length));
-        }
-    }
-
-    /// <summary>
-    /// Returns a new <see cref="ReadOnlySequence{T}"/> which must be used and returned before resetting this instance via the <see cref="ReturnReadOnlySequence"/> method.
-    /// </summary>
-    public readonly ReadOnlySequence<byte> RentReadOnlySequence()
-    {
-        if (_totalLength == 0)
-        {
-            return ReadOnlySequence<byte>.Empty;
-        }
-
-        if (_committed.Count == 1)
-        {
-            var value = _committed[0];
-            return new ReadOnlySequence<byte>(value.Array, 0, value.Length);
-        }
-
-        var runningIndex = 0;
-        var firstSegment = default(BufferSegment);
-        var previousSegment = default(BufferSegment);
-        foreach (var (buffer, length) in _committed)
-        {
-            var segment = BufferSegment.Pool.Get();
-            segment.Initialize(new ReadOnlyMemory<byte>(buffer, 0, length), runningIndex);
-
-            runningIndex += length;
-
-            previousSegment?.SetNext(segment);
-
-            firstSegment ??= segment;
-            previousSegment = segment;
-        }
-
-        return new ReadOnlySequence<byte>(firstSegment, 0, previousSegment, previousSegment.Memory.Length);
-    }
-
-    /// <summary>
-    /// Returns a <see cref="ReadOnlySequence{T}"/> previously rented by <see cref="RentReadOnlySequence"/>;
-    /// </summary>
-    public readonly void ReturnReadOnlySequence(in ReadOnlySequence<byte> sequence)
-    {
-        if (sequence.Start.GetObject() is not BufferSegment segment)
-        {
-            return;
-        }
-
-        while (segment is not null)
-        {
-            var next = segment.Next as BufferSegment;
-            BufferSegment.Pool.Return(segment);
-            segment = next;
-        }
+        ParallelHelper.For(0..Parallelism, new PipeWorker(N, Written));
     }
 }
