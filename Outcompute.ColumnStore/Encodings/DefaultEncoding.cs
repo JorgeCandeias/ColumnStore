@@ -46,7 +46,19 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
 
         // read content
         VerifyEncodingId(ref reader);
-        return ReadSequence(_serializer, ref reader);
+
+        // read the value count prefix
+        var count = ReadCount(ref reader);
+
+        // read each value into a well sized buffer
+        var buffer = MemoryOwner<T>.Allocate(count);
+        var span = buffer.Span;
+        for (var i = 0; i < count; i++)
+        {
+            span[i] = _serializer.Deserialize(ref reader);
+        }
+
+        return buffer;
     }
 
     public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
@@ -194,22 +206,6 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         {
             serializer.Serialize(source[i], ref writer);
         }
-    }
-
-    private static MemoryOwner<T> ReadSequence<TInput>(Serializer<T> serializer, ref Reader<TInput> reader)
-    {
-        // read the value count prefix
-        var count = ReadCount(ref reader);
-
-        // read each value into a well sized buffer
-        var buffer = MemoryOwner<T>.Allocate(count);
-        var span = buffer.Span;
-        for (var i = 0; i < count; i++)
-        {
-            span[i] = serializer.Deserialize(ref reader);
-        }
-
-        return buffer;
     }
 
     private static void WriteCount<TBufferWriter>(int count, ref Writer<TBufferWriter> writer) where TBufferWriter : IBufferWriter<byte>
