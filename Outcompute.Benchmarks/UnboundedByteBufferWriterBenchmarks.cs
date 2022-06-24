@@ -46,7 +46,7 @@ public class UnboundedByteBufferWriterBenchmarks
     public void PooledArrayBufferWriter()
     {
         using var buffer = new PooledArrayBufferWriter(0);
-        for (var i = 0; i < N; i++)
+        for (var i = 0; i < N; i += Written)
         {
             var span = buffer.GetSpan(Written);
             span[..Written].Fill(byte.MaxValue);
@@ -58,7 +58,7 @@ public class UnboundedByteBufferWriterBenchmarks
     public void ArrayPoolBufferWriter()
     {
         using var buffer = new ArrayPoolBufferWriter<byte>();
-        for (var i = 0; i < N; i++)
+        for (var i = 0; i < N; i += Written)
         {
             var span = buffer.GetSpan(Written);
             span[..Written].Fill(byte.MaxValue);
@@ -70,7 +70,7 @@ public class UnboundedByteBufferWriterBenchmarks
     public void ArrayBufferWriter()
     {
         var buffer = new ArrayBufferWriter<byte>();
-        for (var i = 0; i < N; i++)
+        for (var i = 0; i < N; i += Written)
         {
             var span = buffer.GetSpan(Written);
             span[..Written].Fill(byte.MaxValue);
@@ -82,7 +82,7 @@ public class UnboundedByteBufferWriterBenchmarks
     public void Pipe()
     {
         var pipe = new Pipe(_pipeOptions);
-        for (var i = 0; i < N; i++)
+        for (var i = 0; i < N; i += Written)
         {
             var span = pipe.Writer.GetSpan(Written);
             span[..Written].Fill(byte.MaxValue);
