@@ -30,7 +30,7 @@ public class UnboundedByteBufferWriterBenchmarks
 
     // number of parallel workers
     // simulates how the rowgroup conversion process will encode multiple columns in parallel
-    [Params(1, 8)]
+    [Params(1, 2, 4)]
     public int Parallelism { get; set; }
 
     public readonly struct PooledArrayBufferWriterLatestWorker : IAction
