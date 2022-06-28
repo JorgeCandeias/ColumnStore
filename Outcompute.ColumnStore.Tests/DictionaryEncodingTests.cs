@@ -17,13 +17,15 @@ public class DictionaryEncodingTests
         var data = Array.Empty<int>();
 
         // act - encode
-        using var encoded = encoding.Encode(data);
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(data, writer);
+        var encoded = writer.WrittenSpan;
 
         // assert - encoded
         Assert.Equal(2, encoded.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Span);
+        using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
         Assert.True(data.SequenceEqual(decoded.Span.ToArray()));
@@ -37,13 +39,15 @@ public class DictionaryEncodingTests
         var data = new[] { 1, 2, 3, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4 };
 
         // act - encode
-        using var encoded = encoding.Encode(data);
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(data, writer);
+        var encoded = writer.WrittenSpan;
 
         // assert - encoded
         Assert.Equal(26, encoded.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Span);
+        using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
         Assert.True(data.SequenceEqual(decoded.Span.ToArray()));
@@ -63,13 +67,15 @@ public class DictionaryEncodingTests
         }
 
         // act - encode
-        using var encoded = encoding.Encode(span);
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(span, writer);
+        var encoded = writer.WrittenSpan;
 
         // assert - encoded
         Assert.Equal(12, encoded.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Span);
+        using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
         Assert.True(span.SequenceEqual(decoded.Span));
@@ -89,13 +95,15 @@ public class DictionaryEncodingTests
         }
 
         // act - encode
-        using var encoded = encoding.Encode(span);
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(span, writer);
+        var encoded = writer.WrittenSpan;
 
         // assert - encoded
         Assert.Equal(2874945, encoded.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Span);
+        using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
         Assert.True(span.SequenceEqual(decoded.Span));
@@ -115,13 +123,15 @@ public class DictionaryEncodingTests
         }
 
         // act - encode
-        using var encoded = encoding.Encode(span);
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(span, writer);
+        var encoded = writer.WrittenSpan;
 
         // assert - encoded
         Assert.Equal(7975242, encoded.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Span);
+        using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
         Assert.True(span.SequenceEqual(decoded.Span));

@@ -73,13 +73,15 @@ public class DefaultEncodingTests
         var encoding = _provider.GetRequiredService<DefaultEncoding<T>>();
 
         // act - encode
-        using var encoded = encoding.Encode(data);
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(data, writer);
+        var encoded = writer.WrittenSpan;
 
         // assert - encoded
-        Assert.Equal(expectedLength, encoded.Memory.Length);
+        Assert.Equal(expectedLength, encoded.Length);
 
         // act - decode
-        using var decoded = encoding.Decode(encoded.Memory.Span);
+        using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
         Assert.True(data.SequenceEqual(decoded.Memory.Span));
@@ -148,10 +150,12 @@ public class DefaultEncodingTests
     {
         // arrange
         var encoding = _provider.GetRequiredService<DefaultEncoding<int>>();
-        using var encoded = encoding.Encode(source.AsSpan());
+        using var writer = new ArrayPoolBufferWriter<byte>();
+        encoding.Encode(source.AsSpan(), writer);
+        var encoded = writer.WrittenSpan;
 
         // act
-        var result = encoding.Decode(encoded.Memory.Span, value);
+        var result = encoding.Decode(encoded, value);
 
         // assert
         Assert.True(result.Span.SequenceEqual(expected.AsSpan()));

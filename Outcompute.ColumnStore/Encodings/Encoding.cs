@@ -8,7 +8,7 @@ internal abstract class Encoding<T>
     /// <summary>
     /// Encodes the specified values using the specified writer.
     /// </summary>
-    public abstract IMemoryOwner<byte> Encode(ReadOnlySpan<T> source);
+    public abstract void Encode<TBufferWriter>(ReadOnlySpan<T> source, TBufferWriter bufferWriter) where TBufferWriter : IBufferWriter<byte>;
 
     /// <summary>
     /// Decodes all underlying values in the specified sequence.

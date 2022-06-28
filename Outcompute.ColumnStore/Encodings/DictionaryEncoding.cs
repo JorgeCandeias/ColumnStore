@@ -23,12 +23,11 @@ internal class DictionaryEncoding<T> : Encoding<T>
         _sessions = sessions;
     }
 
-    public override MemoryOwner<byte> Encode(ReadOnlySpan<T> source)
+    public override void Encode<TBufferWriter>(ReadOnlySpan<T> source, TBufferWriter bufferWriter)
     {
         // create writing artefacts
         using var session = _sessions.GetSession();
-        var pipe = new Pipe();
-        var writer = Writer.Create(pipe.Writer, session);
+        var writer = Writer.Create(bufferWriter, session);
 
         // prefix with encoding id
         writer.WriteVarUInt32((uint)WellKnownEncodings.Dictionary);
@@ -92,18 +91,7 @@ internal class DictionaryEncoding<T> : Encoding<T>
             }
         }
 
-        // compact the data and return
         writer.Commit();
-        pipe.Writer.Complete();
-        if (!pipe.Reader.TryRead(out var data))
-        {
-            ThrowHelper.ThrowInvalidOperationException();
-        }
-        var result = MemoryOwner<byte>.Allocate((int)data.Buffer.Length);
-        data.Buffer.CopyTo(result.Span);
-        pipe.Reader.Complete();
-
-        return result;
 
         static void AddRange(Dictionary<KeyWrapper, int> lookup, Span<DictionaryRange> span, ref int added, T value, int length)
         {

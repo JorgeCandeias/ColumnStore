@@ -22,20 +22,16 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         _sessions = sessions;
     }
 
-    public override IMemoryOwner<byte> Encode(ReadOnlySpan<T> source)
+    public override void Encode<TBufferWriter>(ReadOnlySpan<T> source, TBufferWriter bufferWriter)
     {
         // arrange
         using var session = _sessions.GetSession();
-        var buffer = new ArrayPoolBufferWriter<byte>();
-        var writer = Writer.Create(buffer, session);
+        var writer = Writer.Create(bufferWriter, session);
 
         // write
         WriteEncodingId(ref writer);
         WriteSequence(source, _serializer, ref writer);
         writer.Commit();
-
-        // done
-        return buffer;
     }
 
     public override IMemoryOwner<T> Decode(ReadOnlySpan<byte> source)
