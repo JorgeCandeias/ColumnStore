@@ -1,25 +1,28 @@
-﻿using Orleans.Serialization.Buffers;
-using Outcompute.ColumnStore.Core.Buffers;
+﻿using Microsoft.Extensions.Options;
+using Orleans.Serialization.Buffers;
 
 namespace Outcompute.ColumnStore.Encodings;
 
 /// <summary>
 /// The default encoding implementation for when no other encoding is available.
-/// This encoding serializes each sequence value individually.
-/// This often generates the largest payload but it can result in a smaller one for sequences with very high cardinality.
+/// This encoding serializes each sequence value individually and works with complex types.
+/// This often generates the largest payload of all encodings but it can result in a smaller one for sequences with very high cardinality.
 /// </summary>
 internal sealed class DefaultEncoding<T> : Encoding<T>
 {
     private readonly Serializer<T> _serializer;
     private readonly SerializerSessionPool _sessions;
+    private readonly EncodingOptions _options;
 
-    public DefaultEncoding(Serializer<T> serializer, SerializerSessionPool sessions)
+    public DefaultEncoding(Serializer<T> serializer, SerializerSessionPool sessions, IOptions<EncodingOptions> options)
     {
         Guard.IsNotNull(serializer, nameof(serializer));
         Guard.IsNotNull(sessions, nameof(sessions));
+        Guard.IsNotNull(options, nameof(options));
 
         _serializer = serializer;
         _sessions = sessions;
+        _options = options.Value;
     }
 
     public override void Encode<TBufferWriter>(ReadOnlySpan<T> source, TBufferWriter bufferWriter)
@@ -28,9 +31,26 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         using var session = _sessions.GetSession();
         var writer = Writer.Create(bufferWriter, session);
 
-        // write
-        WriteEncodingId(ref writer);
-        WriteSequence(source, _serializer, ref writer);
+        // write top headers
+        writer.WriteEncodingId(WellKnownEncodings.Default);
+        writer.WriteCount(source.Length);
+
+        // enumerate each value in the sequence
+        using var buffer = new ArrayPoolBufferWriter<byte>();
+        for (var i = 0; i < source.Length; i++)
+        {
+            // serialize the value upfront so we know the payload size
+            buffer.Clear();
+            _serializer.Serialize(source[i], buffer);
+
+            // write value headers to allow read skipping
+            writer.WriteHash(buffer.WrittenSpan);
+            writer.WriteCount(buffer.WrittenCount);
+
+            // write value
+            writer.Write(buffer.WrittenSpan);
+        }
+
         writer.Commit();
     }
 
@@ -40,73 +60,103 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
 
-        // read content
-        VerifyEncodingId(ref reader);
+        // read top headers
+        reader.VerifyEncodingId(WellKnownEncodings.Default);
+        var count = reader.ReadCount();
 
-        // read the value count prefix
-        var count = ReadCount(ref reader);
-
-        // read each value into a well sized buffer
+        // read each value
         var buffer = MemoryOwner<T>.Allocate(count);
         var span = buffer.Span;
         for (var i = 0; i < count; i++)
         {
+            // ignore headers
+            reader.ReadHash();
+            reader.ReadCount();
+
+            // read the value
             span[i] = _serializer.Deserialize(ref reader);
         }
 
         return buffer;
     }
 
-    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
+    public override IMemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
     {
+        // calculate the stable hash of the value being searched
+        var hash = ComputeHash(value);
+
         // create reading artefacts
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
 
-        VerifyEncodingId(ref reader);
+        // read top headers
+        reader.VerifyEncodingId(WellKnownEncodings.Default);
+        int count = reader.ReadCount();
 
-        int count = ReadCount(ref reader);
-
-        // allocate a pessimistic temporary buffer assuming max cardinality
-        using var buffer = SpanOwner<ValueRange<T>>.Allocate(count, AllocationMode.Clear);
-        var span = buffer.Span;
-        var added = 0;
+        // we dont know the potential result count so use a dynamic buffer
+        var buffer = new ArrayPoolBufferWriter<ValueRange<T>>();
 
         // look for a range start
         var comparer = EqualityComparer<T>.Default;
         for (var i = 0; i < count; i++)
         {
-            var candidate = _serializer.Deserialize(ref reader);
-            if (comparer.Equals(value, candidate))
-            {
-                // initialize the range
-                var start = i;
-                var length = 1;
+            // read current value headers
+            var currHash = reader.ReadHash();
+            var currSize = reader.ReadCount();
 
-                // look for a range end
-                for (i++; i < count; i++)
+            // if the hashes are different then skip deserializing altogether
+            if (currHash != hash)
+            {
+                reader.Skip(currSize);
+                continue;
+            }
+
+            // if the values are different then continue looping
+            var candidate = _serializer.Deserialize(ref reader);
+            if (!comparer.Equals(candidate, value))
+            {
+                continue;
+            }
+
+            // initialize the range
+            var start = i;
+            var length = 1;
+
+            // look for a range end
+            for (i++; i < count; i++)
+            {
+                // read next value headers
+                var nextHash = reader.ReadHash();
+                var nextSize = reader.ReadCount();
+
+                // if the hash is different then skip reading and stop the scan
+                if (nextHash != currHash)
                 {
-                    var next = _serializer.Deserialize(ref reader);
-                    if (comparer.Equals(value, next))
-                    {
-                        length++;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    reader.Skip(nextSize);
+                    break;
                 }
 
-                // yield the found range
-                span[added++] = new ValueRange<T>(value, start, length);
+                // if the value is different then stop the scan
+                var next = _serializer.Deserialize(ref reader);
+                if (!comparer.Equals(value, next))
+                {
+                    break;
+                }
+
+                // otherwise increase the range
+                length++;
             }
+
+            // yield the found range
+            var span = buffer.GetSpan(1);
+            span[0] = new ValueRange<T>(value, start, length);
+            buffer.Advance(1);
         }
 
-        // copy the temporary buffer to a smaller one and return it
-        return span[..added].ToMemoryOwner();
+        return buffer;
     }
 
-    public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length)
+    public override IMemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length)
     {
         Guard.IsGreaterThanOrEqualTo(start, 0, nameof(start));
         Guard.IsGreaterThanOrEqualTo(length, 0, nameof(length));
@@ -121,15 +171,9 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
 
-        // read the encoding id
-        var id = reader.ReadVarUInt32();
-        if (id != (int)WellKnownEncodings.Default)
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Dictionary}'");
-        }
-
-        // read the value count prefix
-        var count = (int)reader.ReadVarUInt32();
+        // read top headers
+        reader.VerifyEncodingId(WellKnownEncodings.Default);
+        var count = reader.ReadCount();
 
         // break early if there is nothing to read
         if (count is 0)
@@ -137,14 +181,15 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
             return MemoryOwner<ValueRange<T>>.Empty;
         }
 
-        // allocate a buffer with at most the window size - worst case scenario of max cardinality
-        var buffer = MemoryOwner<ValueRange<T>>.Allocate(length, AllocationMode.Clear);
-        var added = 0;
+        // we dont know the potential result count so use a dynamic buffer
+        var buffer = new ArrayPoolBufferWriter<ValueRange<T>>();
 
-        // consume data until the window start
+        // skip data until window start
         for (var i = 0; i < start; i++)
         {
-            _serializer.Deserialize(ref reader);
+            reader.ReadHash();
+            var size = reader.ReadCount();
+            reader.Skip(size);
         }
 
         // consume all ranges until reaching length
@@ -166,7 +211,9 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
                 else
                 {
                     // close the interim range
-                    buffer.Span[added++] = new ValueRange<T>(current, s, l);
+                    buffer.GetSpan(1)[0] = new ValueRange<T>(current, s, l);
+                    buffer.Advance(1);
+
                     current = next;
                     s = i;
                     l = 1;
@@ -174,43 +221,21 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
             }
 
             // close the final range
-            buffer.Span[added++] = new ValueRange<T>(current, s, l);
+            buffer.GetSpan(1)[0] = new ValueRange<T>(current, s, l);
+            buffer.Advance(1);
         }
 
         // return a buffer sliced to its contents
-        return buffer[..added];
+        return buffer;
     }
 
-    private static void WriteEncodingId<TInput>(ref Writer<TInput> writer) where TInput : IBufferWriter<byte>
+    private uint ComputeHash(T value)
     {
-        writer.WriteVarUInt32((uint)WellKnownEncodings.Default);
-    }
+        using var temp = SpanOwner<byte>.Allocate(_options.ValueBufferSize);
+        var span = temp.Span;
 
-    private static void VerifyEncodingId<TInput>(ref Reader<TInput> reader)
-    {
-        var id = (WellKnownEncodings)(int)reader.ReadVarUInt32();
-        if (id != WellKnownEncodings.Default)
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Payload does not start with the encoding marker of '{(int)WellKnownEncodings.Default}'");
-        }
-    }
+        _serializer.Serialize(value, ref span);
 
-    private static void WriteSequence<TInput>(ReadOnlySpan<T> source, Serializer<T> serializer, ref Writer<TInput> writer) where TInput : IBufferWriter<byte>
-    {
-        WriteCount(source.Length, ref writer);
-        for (var i = 0; i < source.Length; i++)
-        {
-            serializer.Serialize(source[i], ref writer);
-        }
-    }
-
-    private static void WriteCount<TBufferWriter>(int count, ref Writer<TBufferWriter> writer) where TBufferWriter : IBufferWriter<byte>
-    {
-        writer.WriteVarUInt32((uint)count);
-    }
-
-    private static int ReadCount<TInput>(ref Reader<TInput> reader)
-    {
-        return (int)reader.ReadVarUInt32();
+        return JenkinsHash.ComputeHash(span);
     }
 }

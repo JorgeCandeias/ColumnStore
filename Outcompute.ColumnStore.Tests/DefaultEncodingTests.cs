@@ -17,19 +17,19 @@ public class DefaultEncodingTests
             Add(2, 0, Array.Empty<int>());
 
             // small set
-            Add(28, 13, new[] { 1, 2, 3, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4 });
+            Add(106, 13, new[] { 1, 2, 3, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4 });
 
             // large set with min cardinality
-            Add(2000004, 1_000_000, Enumerable.Repeat(1, 1_000_000));
+            Add(8000004, 1_000_000, Enumerable.Repeat(1, 1_000_000));
 
             // large set with sparse cardinality
-            Add(2360005, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => x / 10000));
+            Add(8320005, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => x / 10000));
 
             // large set with wave cardinality
-            Add(3174404, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => x % 10000));
+            Add(9108104, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => x % 10000));
 
             // large set with max cardinality
-            Add(3991750, 1_000_000, Enumerable.Range(1, 1_000_000));
+            Add(9929029, 1_000_000, Enumerable.Range(1, 1_000_000));
         }
     }
 
@@ -41,19 +41,19 @@ public class DefaultEncodingTests
             Add(2, 0, Array.Empty<string>());
 
             // small set
-            Add(32, 13, new[] { "A", "B", "C", "A", "A", "A", "B", "B", "B", "C", "C", "C", "D" });
+            Add(118, 13, new[] { "A", "B", "C", "A", "A", "A", "B", "B", "B", "C", "C", "C", "D" });
 
             // large set with min cardinality
-            Add(2000009, 1_000_000, Enumerable.Repeat("Value", 1_000_000));
+            Add(13000004, 1_000_000, Enumerable.Repeat("Value", 1_000_000));
 
             // large set with sparse cardinality
-            Add(8900006, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => $"Value{x / 10000}"));
+            Add(14830006, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => $"Value{x / 10000}"));
 
             // large set with wave cardinality
-            Add(10889004, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => $"Value{x % 10000}"));
+            Add(16821804, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => $"Value{x % 10000}"));
 
             // large set with max cardinality
-            Add(12888900, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => $"Value{x}"));
+            Add(18826020, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => $"Value{x}"));
         }
     }
 
@@ -158,7 +158,7 @@ public class DefaultEncodingTests
         var result = encoding.Decode(encoded, value);
 
         // assert
-        Assert.True(result.Span.SequenceEqual(expected.AsSpan()));
+        Assert.True(result.Memory.Span.SequenceEqual(expected.AsSpan()));
     }
 
     /*

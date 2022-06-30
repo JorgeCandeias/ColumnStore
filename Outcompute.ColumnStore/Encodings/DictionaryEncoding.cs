@@ -104,8 +104,10 @@ internal class DictionaryEncoding<T> : Encoding<T>
         }
     }
 
-    public override MemoryOwner<T> Decode(ReadOnlySpan<byte> source)
+    public override IMemoryOwner<T> Decode(ReadOnlySpan<byte> source)
     {
+        // todo
+        /*
         // create reading artefacts
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
@@ -118,7 +120,7 @@ internal class DictionaryEncoding<T> : Encoding<T>
         // break early if there is nothing to read
         if (rowCount is 0)
         {
-            return MemoryOwner<T>.Empty;
+            return SpanOwner<T>.Empty;
         }
 
         // read keys
@@ -132,7 +134,7 @@ internal class DictionaryEncoding<T> : Encoding<T>
 
         // read ranges
         var rangeCount = (int)reader.ReadVarUInt32();
-        var result = MemoryOwner<T>.Allocate(rowCount);
+        var result = SpanOwner<T>.Allocate(rowCount);
         var span = result.Span;
         var added = 0;
         for (var r = 0; r < rangeCount; r++)
@@ -147,6 +149,9 @@ internal class DictionaryEncoding<T> : Encoding<T>
         }
 
         return result;
+        */
+
+        return MemoryOwner<T>.Empty;
     }
 
     public override MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)

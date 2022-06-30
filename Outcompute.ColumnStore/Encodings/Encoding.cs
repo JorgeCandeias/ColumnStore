@@ -18,12 +18,12 @@ internal abstract class Encoding<T>
     /// <summary>
     /// Decodes all underlying ranges for the specified value in the specified sequence.
     /// </summary>
-    public abstract MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value);
+    public abstract IMemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value);
 
     /// <summary>
     /// Decodes all underlying ranges that fall between the specified window.
     /// </summary>
-    public abstract MemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length);
+    public abstract IMemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, int start, int length);
 }
 
 /// <summary>

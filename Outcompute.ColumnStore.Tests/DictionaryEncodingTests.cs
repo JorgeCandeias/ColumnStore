@@ -28,7 +28,7 @@ public class DictionaryEncodingTests
         using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
-        Assert.True(data.SequenceEqual(decoded.Span.ToArray()));
+        Assert.True(data.SequenceEqual(decoded.Memory.Span.ToArray()));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class DictionaryEncodingTests
         using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
-        Assert.True(data.SequenceEqual(decoded.Span.ToArray()));
+        Assert.True(data.SequenceEqual(decoded.Memory.Span.ToArray()));
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class DictionaryEncodingTests
         using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
-        Assert.True(span.SequenceEqual(decoded.Span));
+        Assert.True(span.SequenceEqual(decoded.Memory.Span));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class DictionaryEncodingTests
         using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
-        Assert.True(span.SequenceEqual(decoded.Span));
+        Assert.True(span.SequenceEqual(decoded.Memory.Span));
     }
 
     [Fact]
@@ -134,6 +134,6 @@ public class DictionaryEncodingTests
         using var decoded = encoding.Decode(encoded);
 
         // assert - decoded
-        Assert.True(span.SequenceEqual(decoded.Span));
+        Assert.True(span.SequenceEqual(decoded.Memory.Span));
     }
 }
