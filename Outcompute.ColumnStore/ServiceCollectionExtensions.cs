@@ -14,7 +14,8 @@ public static class ServiceCollectionExtensions
             .AddSingleton(typeof(IColumnStoreFactory<>), typeof(ColumnStoreFactory<>))
             .AddSingleton(typeof(DeltaStoreFactory<>))
             .AddSingleton(typeof(DefaultEncoding<>))
-            .AddSingleton(typeof(DictionaryEncoding<>));
+            .AddSingleton(typeof(DictionaryEncoding<>))
+            .AddSingleton<SequentialEncoding<int>, Int32SequentialEncoding>();
     }
 
     private static IServiceCollection AddGeneratedFactories(this IServiceCollection services)

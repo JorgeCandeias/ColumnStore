@@ -1,30 +1,28 @@
-﻿using Microsoft.Extensions.Options;
-using Orleans.Serialization.Buffers;
-
-namespace Outcompute.ColumnStore.Encodings;
+﻿namespace Outcompute.ColumnStore.Encodings;
 
 /// <summary>
-/// The default encoding implementation for when no other encoding is available.
-/// This encoding serializes each sequence value individually and works with complex types, including heap based object graphs.
-/// This often generates the largest payload of all encodings but it can result in a smaller one for sequences with very high cardinality.
-/// This encoding is very inefficient for small unmanaged types.
+/// A basic sequential encoding appropriate for small unmanaged types such as numeric primitives.
+/// This encoding serializes each sequence value individually without headers.
+/// This encoding is very inefficient for heap based types of any size and so its usage is disabled for those.
 /// </summary>
-internal sealed class DefaultEncoding<T> : Encoding<T>
+internal abstract class SequentialEncoding<T> : Encoding<T>
+    where T : unmanaged
 {
-    private readonly Serializer<T> _serializer;
     private readonly SerializerSessionPool _sessions;
-    private readonly EncodingOptions _options;
 
-    public DefaultEncoding(Serializer<T> serializer, SerializerSessionPool sessions, IOptions<EncodingOptions> options)
+    protected SequentialEncoding(SerializerSessionPool sessions)
     {
-        Guard.IsNotNull(serializer, nameof(serializer));
         Guard.IsNotNull(sessions, nameof(sessions));
-        Guard.IsNotNull(options, nameof(options));
 
-        _serializer = serializer;
         _sessions = sessions;
-        _options = options.Value;
     }
+
+    protected abstract WellKnownEncodings EncodingId { get; }
+
+    protected abstract void Serialize<TBufferWriter>(ref Writer<TBufferWriter> writer, T value)
+        where TBufferWriter : IBufferWriter<byte>;
+
+    protected abstract T Deserialize<TInput>(ref Reader<TInput> reader);
 
     public override void Encode<TBufferWriter>(ReadOnlySpan<T> source, TBufferWriter bufferWriter)
     {
@@ -37,19 +35,9 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         writer.WriteCount(source.Length);
 
         // enumerate each value in the sequence
-        using var buffer = new ArrayPoolBufferWriter<byte>();
         for (var i = 0; i < source.Length; i++)
         {
-            // serialize the value upfront so we know the payload size
-            buffer.Clear();
-            _serializer.Serialize(source[i], buffer);
-
-            // write value headers to allow read skipping
-            writer.WriteHash(buffer.WrittenSpan);
-            writer.WriteCount(buffer.WrittenCount);
-
-            // write value
-            writer.Write(buffer.WrittenSpan);
+            Serialize(ref writer, source[i]);
         }
 
         writer.Commit();
@@ -70,12 +58,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         var span = buffer.Span;
         for (var i = 0; i < count; i++)
         {
-            // ignore headers
-            reader.ReadHash();
-            reader.ReadCount();
-
-            // read the value
-            span[i] = _serializer.Deserialize(ref reader);
+            span[i] = Deserialize(ref reader);
         }
 
         return buffer;
@@ -83,9 +66,6 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
 
     public override IMemoryOwner<ValueRange<T>> Decode(ReadOnlySpan<byte> source, T value)
     {
-        // calculate the stable hash of the value being searched
-        var hash = ComputeHash(value);
-
         // create reading artefacts
         using var session = _sessions.GetSession();
         var reader = Reader.Create(source, session);
@@ -101,19 +81,8 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         var comparer = EqualityComparer<T>.Default;
         for (var i = 0; i < count; i++)
         {
-            // read current value headers
-            var currHash = reader.ReadHash();
-            var currSize = reader.ReadCount();
-
-            // if the hashes are different then skip deserializing altogether
-            if (currHash != hash)
-            {
-                reader.Skip(currSize);
-                continue;
-            }
-
             // if the values are different then continue looping
-            var candidate = _serializer.Deserialize(ref reader);
+            var candidate = Deserialize(ref reader);
             if (!comparer.Equals(candidate, value))
             {
                 continue;
@@ -126,19 +95,8 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
             // look for a range end
             for (i++; i < count; i++)
             {
-                // read next value headers
-                var nextHash = reader.ReadHash();
-                var nextSize = reader.ReadCount();
-
-                // if the hash is different then skip reading and stop the scan
-                if (nextHash != currHash)
-                {
-                    reader.Skip(nextSize);
-                    break;
-                }
-
                 // if the value is different then stop the scan
-                var next = _serializer.Deserialize(ref reader);
+                var next = Deserialize(ref reader);
                 if (!comparer.Equals(value, next))
                 {
                     break;
@@ -149,8 +107,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
             }
 
             // yield the found range
-            var span = buffer.GetSpan(1);
-            span[0] = new ValueRange<T>(value, start, length);
+            buffer.GetSpan(1)[0] = new ValueRange<T>(value, start, length);
             buffer.Advance(1);
         }
 
@@ -188,9 +145,7 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         // skip data until window start
         for (var i = 0; i < start; i++)
         {
-            reader.ReadHash();
-            var size = reader.ReadCount();
-            reader.Skip(size);
+            _ = Deserialize(ref reader);
         }
 
         // consume all ranges until reaching length
@@ -198,13 +153,13 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
         var end = start + length;
         if (start < end)
         {
-            var current = _serializer.Deserialize(ref reader);
+            var current = Deserialize(ref reader);
             var s = start;
             var l = 1;
 
             for (var i = start + 1; i < end; i++)
             {
-                var next = _serializer.Deserialize(ref reader);
+                var next = Deserialize(ref reader);
                 if (comparer.Equals(current, next))
                 {
                     l++;
@@ -228,15 +183,5 @@ internal sealed class DefaultEncoding<T> : Encoding<T>
 
         // return a buffer sliced to its contents
         return buffer;
-    }
-
-    private uint ComputeHash(T value)
-    {
-        using var temp = SpanOwner<byte>.Allocate(_options.ValueBufferSize);
-        var span = temp.Span;
-
-        _serializer.Serialize(value, ref span);
-
-        return JenkinsHash.ComputeHash(span);
     }
 }
