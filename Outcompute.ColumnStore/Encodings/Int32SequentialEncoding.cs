@@ -1,5 +1,8 @@
 ﻿namespace Outcompute.ColumnStore.Encodings;
 
+/// <summary>
+/// A sequential encoding specialized
+/// </summary>
 internal class Int32SequentialEncoding : SequentialEncoding<int>
 {
     public Int32SequentialEncoding(SerializerSessionPool sessions) : base(sessions)

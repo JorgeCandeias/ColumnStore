@@ -1,9 +1,9 @@
 ﻿namespace Outcompute.ColumnStore.Encodings;
 
 /// <summary>
-/// A basic sequential encoding appropriate for small unmanaged types such as numeric primitives.
+/// A basic sequential encoding base appropriate for small unmanaged types such as numeric primitives.
 /// This encoding serializes each sequence value individually without headers.
-/// This encoding is very inefficient for heap based types of any size and so its usage is disabled for those.
+/// This encoding approach is very inefficient for heap based types of any size and so its usage is disabled for those.
 /// </summary>
 internal abstract class SequentialEncoding<T> : Encoding<T>
     where T : unmanaged

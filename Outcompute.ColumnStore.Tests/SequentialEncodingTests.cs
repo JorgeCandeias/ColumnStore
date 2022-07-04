@@ -16,6 +16,13 @@ public class SequentialEncodingTests
         RoundtripCore(expectedLength, bufferLength, source);
     }
 
+    [Theory]
+    [ClassData(typeof(RoundtripInt16Data))]
+    public void RoundtripInt16(int expectedLength, int bufferLength, IEnumerable<short> source)
+    {
+        RoundtripCore(expectedLength, bufferLength, source);
+    }
+
     private void RoundtripCore<T>(int expectedLength, int bufferLength, IEnumerable<T> source)
         where T : unmanaged
     {
@@ -47,7 +54,10 @@ public class SequentialEncodingTests
         Assert.True(data.SequenceEqual(decoded.Memory.Span));
     }
 
-    internal class RoundtripInt32Data : TheoryData</* expected bytes */ int, /* source count */ int, /* source generator */ IEnumerable<int>>
+    internal class RoundtripInt32Data : TheoryData<
+        /* expected bytes */ int,
+        /* source count */ int,
+        /* source generator */ IEnumerable<int>>
     {
         public RoundtripInt32Data()
         {
@@ -71,6 +81,36 @@ public class SequentialEncodingTests
 
             // large set with max cardinality
             Add(2983494, 1_000_000, Enumerable.Range(1, 1_000_000));
+        }
+    }
+
+    internal class RoundtripInt16Data : TheoryData<
+    /* expected bytes */ int,
+    /* source count */ int,
+    /* source generator */ IEnumerable<short>>
+    {
+        public RoundtripInt16Data()
+        {
+            // empty set
+            Add(2, 0, Array.Empty<short>());
+
+            // small set
+            Add(15, 13, new short[] { 1, 2, 3, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4 });
+
+            // negative value set
+            Add(17, 3, new short[] { -9, -8, -7 });
+
+            // large set with min cardinality
+            Add(1000004, 1_000_000, Enumerable.Repeat<short>(1, 1_000_000));
+
+            // large set with sparse cardinality
+            Add(1000004, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => x / 10000).Cast<short>());
+
+            // large set with wave cardinality
+            Add(1987204, 1_000_000, Enumerable.Range(1, 1_000_000).Select(x => x % 10000).Cast<short>());
+
+            // large set with max cardinality
+            Add(2983494, 1_000_000, Enumerable.Range(1, 1_000_000).Cast<short>());
         }
     }
 
