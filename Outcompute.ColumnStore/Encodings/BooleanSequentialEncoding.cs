@@ -8,6 +8,8 @@ internal abstract class BooleanSequentialEncoding : Encoding<bool>
     {
         Guard.IsNotNull(sessions, nameof(sessions));
 
+        System.Runtime.Intrinsics.X86.Avx2.PackSignedSaturate
+
         _sessions = sessions;
     }
 

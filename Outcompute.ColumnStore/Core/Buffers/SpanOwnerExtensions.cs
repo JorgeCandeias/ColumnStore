@@ -8,7 +8,15 @@ public static class SpanOwnerExtensions
     {
         var owner = SpanOwner<T>.Allocate(source.Length);
 
-        source.CopyTo(owner.Span);
+        try
+        {
+            source.CopyTo(owner.Span);
+        }
+        catch (ArgumentException)
+        {
+            owner.Dispose();
+            throw;
+        }
 
         return owner;
     }
@@ -17,7 +25,15 @@ public static class SpanOwnerExtensions
     {
         var owner = SpanOwner<T>.Allocate(source.Length);
 
-        source.CopyTo(owner.Span);
+        try
+        {
+            source.CopyTo(owner.Span);
+        }
+        catch (ArgumentException)
+        {
+            owner.Dispose();
+            throw;
+        }
 
         return owner;
     }
@@ -47,51 +63,25 @@ public static class SpanOwnerExtensions
             span[added++] = item;
         }
 
-        if (added != count)
-        {
-            ThrowHelper.ThrowInvalidOperationException($"Enumerated count of {added} differs from announced count of {count}");
-        }
-
         return owner;
     }
 
-    private static readonly UnboundedChannelOptions _options = new()
-    {
-        SingleReader = true,
-        SingleWriter = true,
-        AllowSynchronousContinuations = true
-    };
-
     private static SpanOwner<T> ToSpanOwnerSlowPath<T>(IEnumerable<T> source)
     {
-        var channel = Channel.CreateUnbounded<T>(_options);
+        var owner = SpanOwner<T>.Allocate(1024);
         var added = 0;
 
         foreach (var item in source)
         {
-            if (channel.Writer.TryWrite(item))
+            if (added == owner.Length)
             {
-                added++;
+                var bigger = SpanOwner<T>.Allocate(owner.Length * 2);
+                owner.Span.CopyTo(bigger.Span);
+                owner.Dispose();
+                owner = bigger;
             }
-            else
-            {
-                ThrowHelper.ThrowInvalidOperationException();
-            }
-        }
-        channel.Writer.Complete();
 
-        var owner = SpanOwner<T>.Allocate(added);
-        var span = owner.Span;
-        for (var i = 0; i < added; i++)
-        {
-            if (channel.Reader.TryRead(out var item))
-            {
-                span[i] = item;
-            }
-            else
-            {
-                ThrowHelper.ThrowInvalidOperationException();
-            }
+            owner.Span[added++] = item;
         }
 
         return owner;
