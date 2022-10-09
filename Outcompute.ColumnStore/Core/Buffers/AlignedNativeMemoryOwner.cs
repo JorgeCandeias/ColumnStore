@@ -6,6 +6,7 @@ namespace Outcompute.ColumnStore.Core.Buffers;
 /// An <see cref="IMemoryOwner{T}"/> implementation that allocates native aligned memory.
 /// It is capable of resizing the underlying buffer up and down but not slicing yet.
 /// </summary>
+[GenerateSerializer]
 internal sealed class AlignedNativeMemoryOwner<T> : MemoryManager<T>
     where T : unmanaged
 {
@@ -45,6 +46,11 @@ internal sealed class AlignedNativeMemoryOwner<T> : MemoryManager<T>
     /// The current length of the buffer.
     /// </summary>
     public int Length => _length;
+
+    /// <summary>
+    /// The memory alignment of the buffer.
+    /// </summary>
+    public int Alignment => _alignment;
 
     public override unsafe Span<T> GetSpan()
     {
